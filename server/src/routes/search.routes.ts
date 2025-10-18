@@ -57,5 +57,49 @@ router.get('/movies/:id', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/search/movies/:id/collections
+ * Get collections that a movie belongs to
+ */
+router.get('/movies/:id/collections', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const movieId = parseInt(id, 10);
+
+    if (isNaN(movieId)) {
+      return res.status(400).json({ error: 'Invalid movie ID' });
+    }
+
+    const collection = await tmdbService.getMovieCollections(movieId);
+
+    res.json(collection);
+  } catch (error) {
+    console.error('Error fetching movie collections:', error);
+    res.status(500).json({ error: 'Failed to fetch movie collections' });
+  }
+});
+
+/**
+ * GET /api/search/collections/:id
+ * Get collection details including all movies
+ */
+router.get('/collections/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const collectionId = parseInt(id, 10);
+
+    if (isNaN(collectionId)) {
+      return res.status(400).json({ error: 'Invalid collection ID' });
+    }
+
+    const collectionDetails = await tmdbService.getCollectionDetails(collectionId);
+
+    res.json(collectionDetails);
+  } catch (error) {
+    console.error('Error fetching collection details:', error);
+    res.status(500).json({ error: 'Failed to fetch collection details' });
+  }
+});
+
 export default router;
 

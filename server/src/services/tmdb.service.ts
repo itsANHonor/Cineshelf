@@ -110,6 +110,42 @@ class TMDbService {
     if (!credits?.cast) return [];
     return credits.cast.slice(0, limit).map((actor) => actor.name);
   }
+
+  /**
+   * Get movie's belonging collections
+   */
+  async getMovieCollections(movieId: number): Promise<any> {
+    try {
+      const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
+        params: {
+          api_key: this.apiKey,
+        },
+      });
+
+      return response.data.belongs_to_collection;
+    } catch (error) {
+      console.error('TMDb movie collections error:', error);
+      throw new Error('Failed to fetch movie collections from TMDb');
+    }
+  }
+
+  /**
+   * Get collection details including all movies
+   */
+  async getCollectionDetails(collectionId: number): Promise<any> {
+    try {
+      const response = await axios.get(`${TMDB_BASE_URL}/collection/${collectionId}`, {
+        params: {
+          api_key: this.apiKey,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('TMDb collection details error:', error);
+      throw new Error('Failed to fetch collection details from TMDb');
+    }
+  }
 }
 
 export const tmdbService = new TMDbService();

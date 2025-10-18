@@ -22,7 +22,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
       onClick={onClick}
     >
       {/* Cover Image */}
-      <div className="relative aspect-[2/3] bg-gray-200 overflow-hidden">
+      <div className="relative aspect-[2/3] bg-gray-200 dark:bg-gray-700 overflow-hidden">
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -33,7 +33,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <svg
-              className="w-16 h-16 text-gray-400"
+              className="w-16 h-16 text-gray-400 dark:text-gray-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -58,14 +58,14 @@ const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
 
       {/* Info */}
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1">{media.title}</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-1">{media.title}</h3>
         {media.release_date && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {new Date(media.release_date).getFullYear()}
           </p>
         )}
         {media.edition_notes && (
-          <p className="text-xs text-gray-600 mt-2 italic line-clamp-1">{media.edition_notes}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 italic line-clamp-1">{media.edition_notes}</p>
         )}
       </div>
     </div>

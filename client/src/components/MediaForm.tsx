@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Media, CreateMediaDto, TMDbMovie } from '../types';
+import { Media, CreateMediaDto, TMDbMovie, Series } from '../types';
 import { apiService } from '../services/api.service';
 import SearchModal from './SearchModal';
+import CollectionImportModal from './CollectionImportModal';
 
 interface MediaFormProps {
   isOpen: boolean;
@@ -10,10 +11,19 @@ interface MediaFormProps {
   editMedia?: Media | null;
 }
 
+interface SeriesAssociation {
+  series_id: number;
+  auto_sort: boolean;
+  sort_order?: number;
+}
+
 const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editMedia }) => {
   const [showSearch, setShowSearch] = useState(false);
+  const [showCollectionImport, setShowCollectionImport] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [availableSeries, setAvailableSeries] = useState<Series[]>([]);
+  const [seriesAssociations, setSeriesAssociations] = useState<SeriesAssociation[]>([]);
   const [formData, setFormData] = useState<CreateMediaDto>({
     title: '',
     tmdb_id: undefined,
@@ -27,6 +37,13 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
     region_code: '',
     custom_image_url: '',
   });
+
+  // Load available series
+  useEffect(() => {
+    if (isOpen) {
+      apiService.getSeries().then(setAvailableSeries).catch(console.error);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (editMedia) {
@@ -43,6 +60,17 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
         region_code: editMedia.region_code || '',
         custom_image_url: editMedia.custom_image_url || '',
       });
+      // Load existing series associations
+      if (editMedia.series && editMedia.series.length > 0) {
+        const associations = editMedia.series.map(s => ({
+          series_id: s.id,
+          auto_sort: true,
+          sort_order: undefined,
+        }));
+        setSeriesAssociations(associations);
+      } else {
+        setSeriesAssociations([]);
+      }
     } else {
       // Reset form when not editing
       setFormData({
@@ -58,6 +86,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
         region_code: '',
         custom_image_url: '',
       });
+      setSeriesAssociations([]);
     }
   }, [editMedia, isOpen]);
 
@@ -97,15 +126,63 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
     }
   };
 
+  const handleCollectionImport = async (collectionId: number, collectionName: string, sortName: string) => {
+    try {
+      const newSeries = await apiService.createSeries({
+        name: collectionName,
+        sort_name: sortName,
+        tmdb_collection_id: collectionId,
+      });
+      setAvailableSeries([...availableSeries, newSeries]);
+      setSeriesAssociations([...seriesAssociations, {
+        series_id: newSeries.id,
+        auto_sort: true,
+      }]);
+      setShowCollectionImport(false);
+    } catch (error) {
+      console.error('Failed to import collection:', error);
+      alert('Failed to import collection. Please try again.');
+    }
+  };
+
+  const handleSeriesToggle = (seriesId: number) => {
+    const exists = seriesAssociations.find(a => a.series_id === seriesId);
+    if (exists) {
+      setSeriesAssociations(seriesAssociations.filter(a => a.series_id !== seriesId));
+    } else {
+      setSeriesAssociations([...seriesAssociations, {
+        series_id: seriesId,
+        auto_sort: true,
+      }]);
+    }
+  };
+
+  const handleSeriesAutoSortToggle = (seriesId: number) => {
+    setSeriesAssociations(seriesAssociations.map(a =>
+      a.series_id === seriesId ? { ...a, auto_sort: !a.auto_sort, sort_order: a.auto_sort ? 1 : undefined } : a
+    ));
+  };
+
+  const handleSeriesSortOrderChange = (seriesId: number, sortOrder: number) => {
+    setSeriesAssociations(seriesAssociations.map(a =>
+      a.series_id === seriesId ? { ...a, sort_order: sortOrder } : a
+    ));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
+      const dataToSubmit = {
+        ...formData,
+        series_associations: seriesAssociations,
+      };
+
       if (editMedia) {
-        await apiService.updateMedia(editMedia.id, formData);
+        await apiService.updateMedia(editMedia.id, dataToSubmit);
       } else {
-        await apiService.createMedia(formData);
+        await apiService.createMedia(dataToSubmit);
       }
       onSuccess();
       onClose();
@@ -129,14 +206,14 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
 
         {/* Modal */}
         <div className="flex min-h-screen items-center justify-center p-4">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 z-10">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {editMedia ? 'Edit Media' : 'Add New Media'}
                 </h2>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -149,12 +226,12 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Left Column - Image */}
                 <div>
-                  <div className="aspect-[2/3] bg-gray-200 rounded-lg overflow-hidden mb-4">
+                  <div className="aspect-[2/3] bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden mb-4">
                     {imageUrl ? (
                       <img src={imageUrl} alt={formData.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-20 h-20 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-20 h-20 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
@@ -172,7 +249,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                   )}
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Upload Custom Image
                     </label>
                     <input
@@ -180,9 +257,9 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                       accept="image/*"
                       onChange={handleFileUpload}
                       disabled={uploadingImage}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                      className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-primary-50 dark:file:bg-primary-900 file:text-primary-700 dark:file:text-primary-200 hover:file:bg-primary-100 dark:hover:file:bg-primary-800"
                     />
-                    {uploadingImage && <p className="text-sm text-gray-500 mt-2">Uploading...</p>}
+                    {uploadingImage && <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Uploading...</p>}
                   </div>
                 </div>
 
@@ -190,7 +267,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                 <div className="space-y-4">
                   {/* Title */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Title *
                     </label>
                     <input
@@ -198,20 +275,20 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                       required
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
 
                   {/* Physical Format */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Physical Format *
                     </label>
                     <select
                       required
                       value={formData.physical_format}
                       onChange={(e) => setFormData({ ...formData, physical_format: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="4K UHD">4K UHD</option>
                       <option value="Blu-ray">Blu-ray</option>
@@ -221,20 +298,20 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
 
                   {/* Release Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Release Date
                     </label>
                     <input
                       type="date"
                       value={formData.release_date}
                       onChange={(e) => setFormData({ ...formData, release_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
 
                   {/* Edition Notes */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Edition Notes
                     </label>
                     <input
@@ -242,13 +319,13 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                       placeholder="e.g., Steelbook, Collector's Edition"
                       value={formData.edition_notes}
                       onChange={(e) => setFormData({ ...formData, edition_notes: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
 
                   {/* Region Code */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Region Code
                     </label>
                     <input
@@ -256,40 +333,114 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                       placeholder="e.g., Region A, Region 1"
                       value={formData.region_code}
                       onChange={(e) => setFormData({ ...formData, region_code: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
 
                   {/* Director */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Director
                     </label>
                     <input
                       type="text"
                       value={formData.director}
                       onChange={(e) => setFormData({ ...formData, director: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
 
                   {/* Synopsis */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Synopsis
                     </label>
                     <textarea
                       rows={4}
                       value={formData.synopsis}
                       onChange={(e) => setFormData({ ...formData, synopsis: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Series Section */}
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Series</h3>
+                  {formData.tmdb_id && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCollectionImport(true)}
+                      className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                    >
+                      + Import from TMDb
+                    </button>
+                  )}
+                </div>
+
+                {availableSeries.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No series available. Create one in the Series management page.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {availableSeries.map(series => {
+                      const association = seriesAssociations.find(a => a.series_id === series.id);
+                      const isSelected = !!association;
+
+                      return (
+                        <div key={series.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`series-${series.id}`}
+                              checked={isSelected}
+                              onChange={() => handleSeriesToggle(series.id)}
+                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+                            />
+                            <label htmlFor={`series-${series.id}`} className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {series.name}
+                            </label>
+                          </div>
+
+                          {isSelected && association && (
+                            <div className="mt-2 ml-6 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id={`auto-sort-${series.id}`}
+                                  checked={association.auto_sort}
+                                  onChange={() => handleSeriesAutoSortToggle(series.id)}
+                                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+                                />
+                                <label htmlFor={`auto-sort-${series.id}`} className="text-xs text-gray-600 dark:text-gray-400">
+                                  Auto-sort by release date
+                                </label>
+                              </div>
+
+                              {!association.auto_sort && (
+                                <div>
+                                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Manual Sort Order:</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={association.sort_order || 1}
+                                    onChange={(e) => handleSeriesSortOrderChange(series.id, parseInt(e.target.value))}
+                                    className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Actions */}
-              <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
+              <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <button type="button" onClick={onClose} className="btn-secondary">
                   Cancel
                 </button>
@@ -308,6 +459,15 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
         onClose={() => setShowSearch(false)}
         onSelect={handleTMDbSelect}
       />
+
+      {/* Collection Import Modal */}
+      {showCollectionImport && formData.tmdb_id && (
+        <CollectionImportModal
+          tmdbId={formData.tmdb_id}
+          onClose={() => setShowCollectionImport(false)}
+          onImport={handleCollectionImport}
+        />
+      )}
     </>
   );
 };

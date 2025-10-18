@@ -1,3 +1,22 @@
+// Series types
+export interface Series {
+  id: number;
+  name: string;
+  sort_name: string;
+  tmdb_collection_id?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MovieSeries {
+  id: number;
+  media_id: number;
+  series_id: number;
+  sort_order?: number;
+  auto_sort: boolean;
+  series?: Series;
+}
+
 // Media types
 export interface Media {
   id: number;
@@ -12,6 +31,7 @@ export interface Media {
   edition_notes?: string;
   region_code?: string;
   custom_image_url?: string;
+  series?: Series[];
   created_at?: string;
   updated_at?: string;
 }
@@ -64,6 +84,7 @@ export interface Settings {
   collection_public: string;
   site_title: string;
   items_per_page: string;
+  default_theme: 'light' | 'dark' | 'system';
   [key: string]: string;
 }
 
@@ -76,7 +97,7 @@ export interface AuthResponse {
 
 // Filter and sort types
 export type PhysicalFormat = '4K UHD' | 'Blu-ray' | 'DVD' | 'all';
-export type SortField = 'title' | 'release_date' | 'created_at' | 'physical_format';
+export type SortField = 'title' | 'release_date' | 'created_at' | 'physical_format' | 'series_sort' | 'director_last_name';
 export type SortOrder = 'asc' | 'desc';
 
 export interface FilterOptions {

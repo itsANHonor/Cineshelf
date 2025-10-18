@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import HomePage from './pages/HomePage';
 import AdminPage from './pages/AdminPage';
 import CollectionPage from './pages/CollectionPage';
@@ -41,17 +42,19 @@ function App() {
   }
 
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
-          <Routes>
-            <Route path="/" element={<HomePage health={health} />} />
-            <Route path="/collection" element={<CollectionPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800">
+            <Routes>
+              <Route path="/" element={<HomePage health={health} />} />
+              <Route path="/collection" element={<CollectionPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

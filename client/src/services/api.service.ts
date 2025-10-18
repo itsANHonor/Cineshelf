@@ -8,6 +8,7 @@ import {
   Settings,
   AuthResponse,
   FilterOptions,
+  Series,
 } from '../types';
 
 class ApiService {
@@ -115,6 +116,46 @@ class ApiService {
   async getMovieDetails(tmdbId: number): Promise<TMDbMovieDetails> {
     const response = await this.api.get<TMDbMovieDetails>(`/search/movies/${tmdbId}`);
     return response.data;
+  }
+
+  async getTMDbCollections(tmdbId: number): Promise<any> {
+    const response = await this.api.get(`/search/movies/${tmdbId}/collections`);
+    return response.data;
+  }
+
+  async getCollectionDetails(collectionId: number): Promise<any> {
+    const response = await this.api.get(`/search/collections/${collectionId}`);
+    return response.data;
+  }
+
+  // Series methods
+  async getSeries(): Promise<Series[]> {
+    const response = await this.api.get<Series[]>('/series');
+    return response.data;
+  }
+
+  async getSeriesById(id: number): Promise<Series> {
+    const response = await this.api.get<Series>(`/series/${id}`);
+    return response.data;
+  }
+
+  async getSeriesMovies(id: number): Promise<Media[]> {
+    const response = await this.api.get<Media[]>(`/series/${id}/movies`);
+    return response.data;
+  }
+
+  async createSeries(data: Omit<Series, 'id' | 'created_at' | 'updated_at'>): Promise<Series> {
+    const response = await this.api.post<Series>('/series', data);
+    return response.data;
+  }
+
+  async updateSeries(id: number, data: Partial<Omit<Series, 'id' | 'created_at' | 'updated_at'>>): Promise<Series> {
+    const response = await this.api.put<Series>(`/series/${id}`, data);
+    return response.data;
+  }
+
+  async deleteSeries(id: number): Promise<void> {
+    await this.api.delete(`/series/${id}`);
   }
 
   // Settings methods
