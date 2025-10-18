@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  displaycase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: displaycase
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TMDB_API_KEY=${TMDB_API_KEY}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - DATABASE_PATH=/data/database.sqlite
+      - UPLOAD_DIR=/data/uploads
+    volumes:
+      - data:/data
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.displaycase.description=Display Case - Homelab Media Collection Manager"
+
+volumes:
+  data:
+    driver: local
+    labels:
+      - "com.displaycase.description=Persistent storage for database and uploads"
+

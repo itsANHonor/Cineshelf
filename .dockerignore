@@ -1,0 +1,68 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+.vite/
+**/.vite/
+
+# Database files
+*.sqlite
+*.sqlite-journal
+*.db
+
+# Upload files
+uploads/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!env.docker.example
+
+# Logs
+*.log
+logs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker files (don't need to copy these into the image)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Scripts (not needed in container)
+scripts/
+
+# Test files
+coverage/
+.nyc_output/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+

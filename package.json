@@ -1,0 +1,19 @@
+{
+  "name": "display-case",
+  "version": "1.0.0",
+  "description": "A self-hosted web application for cataloging and displaying physical video media collections",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "cd server && npm run dev",
+    "client:dev": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "keywords": ["media", "collection", "catalog", "movies", "blu-ray", "dvd"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
