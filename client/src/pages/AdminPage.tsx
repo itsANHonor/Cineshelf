@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Media } from '../types';
+import { Media, SortField, SortOrder } from '../types';
 import { apiService } from '../services/api.service';
 import MediaForm from '../components/MediaForm';
 import SeriesManager from '../components/SeriesManager';
@@ -24,6 +24,9 @@ const AdminPage: React.FC = () => {
   const [editingMedia, setEditingMedia] = useState<Media | null>(null);
   const [isPublic, setIsPublic] = useState(false);
   const [defaultTheme, setDefaultTheme] = useState<'light' | 'dark' | 'system'>('light');
+  const [defaultSortBy, setDefaultSortBy] = useState<SortField>('created_at');
+  const [defaultSortOrder, setDefaultSortOrder] = useState<SortOrder>('desc');
+  const [collectionTitle, setCollectionTitle] = useState('Media Collection');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
@@ -42,6 +45,9 @@ const AdminPage: React.FC = () => {
       setMedia(mediaData);
       setIsPublic(settings.collection_public === 'true');
       setDefaultTheme((settings.default_theme as 'light' | 'dark' | 'system') || 'light');
+      setDefaultSortBy((settings.default_sort_by as SortField) || 'created_at');
+      setDefaultSortOrder((settings.default_sort_order as SortOrder) || 'desc');
+      setCollectionTitle(settings.collection_title || 'Media Collection');
       // Apply admin's default theme
       if (settings.default_theme) {
         setTheme(settings.default_theme as 'light' | 'dark' | 'system');
@@ -101,6 +107,36 @@ const AdminPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to update theme:', error);
       alert('Failed to update theme. Please try again.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleSortChange = async (field: SortField, order: SortOrder) => {
+    setIsSavingSettings(true);
+    try {
+      await apiService.updateSettings({
+        default_sort_by: field,
+        default_sort_order: order,
+      });
+      setDefaultSortBy(field);
+      setDefaultSortOrder(order);
+    } catch (error) {
+      console.error('Failed to update sort settings:', error);
+      alert('Failed to update sort settings. Please try again.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleCollectionTitleChange = async (newTitle: string) => {
+    setIsSavingSettings(true);
+    try {
+      await apiService.updateSetting('collection_title', newTitle);
+      setCollectionTitle(newTitle);
+    } catch (error) {
+      console.error('Failed to update collection title:', error);
+      alert('Failed to update collection title. Please try again.');
     } finally {
       setIsSavingSettings(false);
     }
@@ -407,6 +443,32 @@ const AdminPage: React.FC = () => {
           </div>
 
           <div className="card">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Collection Title</h3>
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Customize the main heading displayed on your collection page.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Collection Title
+                </label>
+                <input
+                  type="text"
+                  value={collectionTitle}
+                  onChange={(e) => setCollectionTitle(e.target.value)}
+                  onBlur={() => handleCollectionTitleChange(collectionTitle)}
+                  disabled={isSavingSettings}
+                  placeholder="Media Collection"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  e.g., "Alex's Bluray Bonanza" or "My Movie Collection"
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Default Theme</h3>
             <div className="flex flex-col gap-3">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
@@ -461,6 +523,51 @@ const AdminPage: React.FC = () => {
                     <span className="font-medium">System</span>
                   </div>
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Default Sort Order (Admin)</h3>
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Set your preferred default sorting for the collection. This will be used when you view the collection as admin.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Sort by
+                  </label>
+                  <select
+                    value={defaultSortBy}
+                    onChange={(e) => handleSortChange(e.target.value as SortField, defaultSortOrder)}
+                    disabled={isSavingSettings}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="title">Title</option>
+                    <option value="series_sort">Series</option>
+                    <option value="director_last_name">Director</option>
+                    <option value="release_date">Year</option>
+                    <option value="created_at">Added</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Order
+                  </label>
+                  <select
+                    value={defaultSortOrder}
+                    onChange={(e) => handleSortChange(defaultSortBy, e.target.value as SortOrder)}
+                    disabled={isSavingSettings}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="asc">Ascending (A-Z, 0-9)</option>
+                    <option value="desc">Descending (Z-A, 9-0)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                <p><strong>Note:</strong> Public users will default to "Title (Ascending)" sorting and their preferences will be saved in their browser session.</p>
               </div>
             </div>
           </div>

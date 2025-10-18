@@ -84,7 +84,10 @@ export interface Settings {
   collection_public: string;
   site_title: string;
   items_per_page: string;
-  default_theme: 'light' | 'dark' | 'system';
+  default_theme: string;
+  default_sort_by: string;
+  default_sort_order: string;
+  collection_title: string;
   [key: string]: string;
 }
 
