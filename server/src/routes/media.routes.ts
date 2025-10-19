@@ -14,7 +14,7 @@ interface MediaItem {
   release_date?: string;
   director?: string;
   cast?: string; // JSON string
-  physical_format: string;
+  physical_format: string; // JSON string of array
   edition_notes?: string;
   region_code?: string;
   custom_image_url?: string;
@@ -42,9 +42,12 @@ router.get('/', async (req: Request, res: Response) => {
       )
       .groupBy('media.id');
 
-    // Filter by physical format
+    // Filter by physical format - check if format is in the JSON array
     if (format && format !== 'all') {
-      query = query.where('media.physical_format', format);
+      query = query.whereRaw(`EXISTS (
+        SELECT 1 FROM json_each(media.physical_format) 
+        WHERE json_each.value = ?
+      )`, [format]);
     }
 
     // Sorting
@@ -70,7 +73,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     const media = await query;
 
-    // Parse cast JSON strings and series data
+    // Parse cast, physical_format JSON strings and series data
     const mediaWithParsedData = media.map((item) => {
       const series_ids = item.series_ids ? item.series_ids.split(',').map(Number) : [];
       const series_names = item.series_names ? item.series_names.split(',') : [];
@@ -85,6 +88,7 @@ router.get('/', async (req: Request, res: Response) => {
       return {
         ...item,
         cast: item.cast ? JSON.parse(item.cast) : [],
+        physical_format: item.physical_format ? JSON.parse(item.physical_format) : [],
         series,
         // Remove the concatenated fields
         series_ids: undefined,
@@ -113,9 +117,12 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Media item not found' });
     }
 
-    // Parse cast JSON string
+    // Parse cast and physical_format JSON strings
     if (media.cast) {
       media.cast = JSON.parse(media.cast);
+    }
+    if (media.physical_format) {
+      media.physical_format = JSON.parse(media.physical_format);
     }
 
     res.json(media);
@@ -131,12 +138,39 @@ router.get('/:id', async (req: Request, res: Response) => {
  */
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { series_associations, ...mediaData }: MediaItem & { series_associations?: any[] } = req.body;
+    const { series_associations, ...mediaData }: any = req.body;
 
     // Validate required fields
     if (!mediaData.title || !mediaData.physical_format) {
       return res.status(400).json({ error: 'Title and physical_format are required' });
     }
+
+    // Validate and convert physical_format to JSON array
+    let formatArray: string[];
+    if (Array.isArray(mediaData.physical_format)) {
+      formatArray = mediaData.physical_format;
+    } else if (typeof mediaData.physical_format === 'string') {
+      // If single string, convert to array
+      formatArray = [mediaData.physical_format];
+    } else {
+      return res.status(400).json({ error: 'physical_format must be a string or array' });
+    }
+
+    // Validate each format
+    const validFormats = ['4K UHD', 'Blu-ray', 'DVD', 'LaserDisc', 'VHS'];
+    for (const format of formatArray) {
+      if (!validFormats.includes(format)) {
+        return res.status(400).json({ 
+          error: `Invalid physical format: ${format}. Must be one of: ${validFormats.join(', ')}` 
+        });
+      }
+    }
+
+    if (formatArray.length === 0) {
+      return res.status(400).json({ error: 'At least one physical format is required' });
+    }
+
+    mediaData.physical_format = JSON.stringify(formatArray);
 
     // Convert cast array to JSON string if provided
     if (mediaData.cast && typeof mediaData.cast !== 'string') {
@@ -158,9 +192,12 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     const newMedia = await db('media').where({ id }).first();
 
-    // Parse cast back to array for response
+    // Parse cast and physical_format back to arrays for response
     if (newMedia.cast) {
       newMedia.cast = JSON.parse(newMedia.cast);
+    }
+    if (newMedia.physical_format) {
+      newMedia.physical_format = JSON.parse(newMedia.physical_format);
     }
 
     // Fetch series data
@@ -185,12 +222,40 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { series_associations, ...mediaData }: Partial<MediaItem> & { series_associations?: any[] } = req.body;
+    const { series_associations, ...mediaData }: any = req.body;
 
     // Check if media exists
     const existingMedia = await db('media').where({ id }).first();
     if (!existingMedia) {
       return res.status(404).json({ error: 'Media item not found' });
+    }
+
+    // Validate and convert physical_format to JSON array if provided
+    if (mediaData.physical_format !== undefined) {
+      let formatArray: string[];
+      if (Array.isArray(mediaData.physical_format)) {
+        formatArray = mediaData.physical_format;
+      } else if (typeof mediaData.physical_format === 'string') {
+        formatArray = [mediaData.physical_format];
+      } else {
+        return res.status(400).json({ error: 'physical_format must be a string or array' });
+      }
+
+      // Validate each format
+      const validFormats = ['4K UHD', 'Blu-ray', 'DVD', 'LaserDisc', 'VHS'];
+      for (const format of formatArray) {
+        if (!validFormats.includes(format)) {
+          return res.status(400).json({ 
+            error: `Invalid physical format: ${format}. Must be one of: ${validFormats.join(', ')}` 
+          });
+        }
+      }
+
+      if (formatArray.length === 0) {
+        return res.status(400).json({ error: 'At least one physical format is required' });
+      }
+
+      mediaData.physical_format = JSON.stringify(formatArray);
     }
 
     // Convert cast array to JSON string if provided
@@ -227,9 +292,12 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     const updatedMedia = await db('media').where({ id }).first();
 
-    // Parse cast back to array for response
+    // Parse cast and physical_format back to arrays for response
     if (updatedMedia.cast) {
       updatedMedia.cast = JSON.parse(updatedMedia.cast);
+    }
+    if (updatedMedia.physical_format) {
+      updatedMedia.physical_format = JSON.parse(updatedMedia.physical_format);
     }
 
     // Fetch series data

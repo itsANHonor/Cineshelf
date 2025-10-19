@@ -42,6 +42,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
               <option value="4K UHD">4K UHD</option>
               <option value="Blu-ray">Blu-ray</option>
               <option value="DVD">DVD</option>
+              <option value="LaserDisc">LaserDisc</option>
+              <option value="VHS">VHS</option>
             </select>
           </div>
 

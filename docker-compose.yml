@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: cineshelf
     restart: unless-stopped
+    user: "1000:1000"
     ports:
       - "${PORT:-3000}:3000"
     environment:
@@ -17,7 +18,7 @@ services:
       - DATABASE_PATH=/data/database.sqlite
       - UPLOAD_DIR=/data/uploads
     volumes:
-      - data:/data
+      - /opt/cineshelf:/data
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -26,10 +27,4 @@ services:
       start_period: 40s
     labels:
       - "com.cineshelf.description=Cineshelf - Homelab Media Collection Manager"
-
-volumes:
-  data:
-    driver: local
-    labels:
-      - "com.cineshelf.description=Persistent storage for database and uploads"
 

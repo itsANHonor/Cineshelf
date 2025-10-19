@@ -32,7 +32,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
     release_date: '',
     director: '',
     cast: [],
-    physical_format: 'Blu-ray',
+    physical_format: [],
     edition_notes: '',
     region_code: '',
     custom_image_url: '',
@@ -81,7 +81,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
         release_date: '',
         director: '',
         cast: [],
-        physical_format: 'Blu-ray',
+        physical_format: [],
         edition_notes: '',
         region_code: '',
         custom_image_url: '',
@@ -171,6 +171,13 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate at least one format is selected
+    if (formData.physical_format.length === 0) {
+      alert('Please select at least one physical format.');
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
@@ -279,21 +286,36 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                     />
                   </div>
 
-                  {/* Physical Format */}
+                  {/* Physical Formats */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Physical Format *
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Physical Formats * (select all that apply)
                     </label>
-                    <select
-                      required
-                      value={formData.physical_format}
-                      onChange={(e) => setFormData({ ...formData, physical_format: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="4K UHD">4K UHD</option>
-                      <option value="Blu-ray">Blu-ray</option>
-                      <option value="DVD">DVD</option>
-                    </select>
+                    <div className="space-y-2">
+                      {['4K UHD', 'Blu-ray', 'DVD', 'LaserDisc', 'VHS'].map((format) => (
+                        <label key={format} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.physical_format.includes(format)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData({
+                                  ...formData,
+                                  physical_format: [...formData.physical_format, format],
+                                });
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  physical_format: formData.physical_format.filter((f) => f !== format),
+                                });
+                              }
+                            }}
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded mr-2"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{format}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Release Date */}

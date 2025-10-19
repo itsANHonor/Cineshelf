@@ -28,6 +28,11 @@ const AdminPage: React.FC = () => {
   const [defaultSortOrder, setDefaultSortOrder] = useState<SortOrder>('desc');
   const [collectionTitle, setCollectionTitle] = useState('Media Collection');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importMode, setImportMode] = useState<'add' | 'replace'>('add');
+  const [showImportSchema, setShowImportSchema] = useState(false);
+  const [importSchema, setImportSchema] = useState<any>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -142,6 +147,95 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const blob = await apiService.exportCollection();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().toISOString().split('T')[0];
+      link.download = `cineshelf-export-${timestamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export collection:', error);
+      alert('Failed to export collection. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      
+      // Validate first
+      const validation = await apiService.validateCSV(text);
+      
+      if (!validation.valid) {
+        const errorMessage = validation.errors.map((e: any) => `Row ${e.row}: ${e.error}`).join('\n');
+        alert(`CSV validation failed:\n\n${errorMessage}`);
+        setIsImporting(false);
+        return;
+      }
+
+      // Show warnings if any
+      if (validation.warnings && validation.warnings.length > 0) {
+        const warningMessage = validation.warnings.map((w: any) => `Row ${w.row}: ${w.warning}`).join('\n');
+        const proceed = confirm(`CSV has warnings:\n\n${warningMessage}\n\nDo you want to proceed with import?`);
+        if (!proceed) {
+          setIsImporting(false);
+          return;
+        }
+      }
+
+      // Confirm import
+      const modeText = importMode === 'replace' ? 'REPLACE your entire collection' : 'ADD to your collection';
+      const confirmMessage = `Import ${validation.total_rows} items and ${modeText}?\n\n${importMode === 'replace' ? 'WARNING: This will DELETE all existing items!' : ''}`;
+      
+      if (!confirm(confirmMessage)) {
+        setIsImporting(false);
+        return;
+      }
+
+      // Import
+      const result = await apiService.importCollection(text, importMode);
+      
+      if (result.success) {
+        alert(`Import completed!\n\nSuccessful: ${result.results.successful}\nFailed: ${result.results.failed}`);
+        await loadData(); // Reload the collection
+      } else {
+        alert('Import failed. Please check your CSV file and try again.');
+      }
+    } catch (error) {
+      console.error('Failed to import collection:', error);
+      alert('Failed to import collection. Please try again.');
+    } finally {
+      setIsImporting(false);
+      // Reset file input
+      event.target.value = '';
+    }
+  };
+
+  const handleViewSchema = async () => {
+    if (!importSchema) {
+      try {
+        const schema = await apiService.getImportExportSchema();
+        setImportSchema(schema);
+      } catch (error) {
+        console.error('Failed to load schema:', error);
+      }
+    }
+    setShowImportSchema(!showImportSchema);
+  };
+
   // Login screen
   if (!isAuthenticated) {
     return (
@@ -205,9 +299,11 @@ const AdminPage: React.FC = () => {
 
   const stats = {
     total: media.length,
-    uhd: media.filter((m) => m.physical_format === '4K UHD').length,
-    bluray: media.filter((m) => m.physical_format === 'Blu-ray').length,
-    dvd: media.filter((m) => m.physical_format === 'DVD').length,
+    uhd: media.filter((m) => m.physical_format.includes('4K UHD')).length,
+    bluray: media.filter((m) => m.physical_format.includes('Blu-ray')).length,
+    dvd: media.filter((m) => m.physical_format.includes('DVD')).length,
+    laserdisc: media.filter((m) => m.physical_format.includes('LaserDisc')).length,
+    vhs: media.filter((m) => m.physical_format.includes('VHS')).length,
   };
 
   return (
@@ -302,7 +398,7 @@ const AdminPage: React.FC = () => {
       {/* Stats */}
       <div className="card mb-8">
         <h3 className="text-lg font-semibold mb-4">Collection Overview</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-primary-600">{stats.total}</div>
             <div className="text-sm text-gray-600">Total Items</div>
@@ -318,6 +414,14 @@ const AdminPage: React.FC = () => {
           <div className="text-center">
             <div className="text-2xl font-bold text-orange-600">{stats.dvd}</div>
             <div className="text-sm text-gray-600">DVD</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">{stats.laserdisc}</div>
+            <div className="text-sm text-gray-600">LaserDisc</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-red-600">{stats.vhs}</div>
+            <div className="text-sm text-gray-600">VHS</div>
           </div>
         </div>
       </div>
@@ -356,8 +460,12 @@ const AdminPage: React.FC = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-gray-900 dark:text-gray-100">{item.title}</h4>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                    <span className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{item.physical_format}</span>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 flex-wrap">
+                    {item.physical_format.map((format, idx) => (
+                      <span key={idx} className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                        {format}
+                      </span>
+                    ))}
                     {item.release_date && (
                       <span>{new Date(item.release_date).getFullYear()}</span>
                     )}
@@ -573,8 +681,116 @@ const AdminPage: React.FC = () => {
           </div>
 
           <div className="card">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Import / Export Collection</h3>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Export your collection to CSV for backup or migration. Import CSV files to add or replace your collection.
+              </p>
+
+              {/* Export Section */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Export Collection</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Download your entire collection as a CSV file with all metadata.
+                </p>
+                <button
+                  onClick={handleExport}
+                  disabled={isExporting || media.length === 0}
+                  className="btn-primary"
+                >
+                  {isExporting ? 'Exporting...' : `Export ${stats.total} Items to CSV`}
+                </button>
+              </div>
+
+              {/* Import Section */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Import Collection</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Import media items from a CSV file. The CSV must include at minimum: title and physical_format.
+                </p>
+                
+                <div className="mb-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-2">
+                    <input
+                      type="radio"
+                      name="importMode"
+                      value="add"
+                      checked={importMode === 'add'}
+                      onChange={(e) => setImportMode(e.target.value as 'add' | 'replace')}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
+                    />
+                    <span>Add to existing collection</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="radio"
+                      name="importMode"
+                      value="replace"
+                      checked={importMode === 'replace'}
+                      onChange={(e) => setImportMode(e.target.value as 'add' | 'replace')}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
+                    />
+                    <span className="text-red-600 dark:text-red-400 font-medium">Replace entire collection (deletes all existing items)</span>
+                  </label>
+                </div>
+
+                <div className="flex gap-2">
+                  <label className="btn-primary cursor-pointer">
+                    {isImporting ? 'Importing...' : 'Choose CSV File to Import'}
+                    <input
+                      type="file"
+                      accept=".csv,text/csv"
+                      onChange={handleImport}
+                      disabled={isImporting}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    onClick={handleViewSchema}
+                    className="btn-secondary"
+                  >
+                    {showImportSchema ? 'Hide' : 'View'} CSV Schema
+                  </button>
+                </div>
+              </div>
+
+              {/* Schema Documentation */}
+              {showImportSchema && importSchema && (
+                <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 mt-4">
+                  <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2">CSV Import Schema</h5>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                    <p className="font-medium">Required Fields:</p>
+                    <ul className="list-disc list-inside ml-2 space-y-1">
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">title</code> - The title of the media item</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">physical_format</code> - Must be one of: 4K UHD, Blu-ray, DVD, LaserDisc, VHS</li>
+                    </ul>
+                    <p className="font-medium mt-3">Optional Fields:</p>
+                    <ul className="list-disc list-inside ml-2 space-y-1">
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">tmdb_id</code> - The Movie Database ID (integer)</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">synopsis</code> - Plot description</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">cover_art_url</code> - URL to cover image</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">release_date</code> - Date in YYYY-MM-DD format</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">director</code> - Director name(s)</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">cast</code> - JSON array of cast members</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">edition_notes</code> - Edition details</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">region_code</code> - Region code</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">custom_image_url</code> - URL to custom image</li>
+                    </ul>
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
+                      <p className="font-medium text-blue-800 dark:text-blue-300">Example CSV:</p>
+                      <pre className="text-xs mt-2 overflow-x-auto">
+{importSchema.example_csv}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Collection Stats</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary-600">{stats.total}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">Total Items</div>
@@ -590,6 +806,14 @@ const AdminPage: React.FC = () => {
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">{stats.dvd}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">DVD</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">{stats.laserdisc}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">LaserDisc</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{stats.vhs}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">VHS</div>
               </div>
             </div>
           </div>

@@ -27,7 +27,7 @@ export interface Media {
   release_date?: string;
   director?: string;
   cast?: string[];
-  physical_format: string;
+  physical_format: string[];
   edition_notes?: string;
   region_code?: string;
   custom_image_url?: string;
@@ -44,7 +44,7 @@ export interface CreateMediaDto {
   release_date?: string;
   director?: string;
   cast?: string[];
-  physical_format: string;
+  physical_format: string[];
   edition_notes?: string;
   region_code?: string;
   custom_image_url?: string;
@@ -99,7 +99,7 @@ export interface AuthResponse {
 }
 
 // Filter and sort types
-export type PhysicalFormat = '4K UHD' | 'Blu-ray' | 'DVD' | 'all';
+export type PhysicalFormat = '4K UHD' | 'Blu-ray' | 'DVD' | 'LaserDisc' | 'VHS' | 'all';
 export type SortField = 'title' | 'release_date' | 'created_at' | 'physical_format' | 'series_sort' | 'director_last_name';
 export type SortOrder = 'asc' | 'desc';
 

@@ -1,6 +1,6 @@
 # Cineshelf 🎬
 
-A simple, clean, and modern self-hosted web application for cataloging and displaying your personal collection of physical video media (Blu-rays, 4K UHDs, and DVDs).
+A simple, clean, and modern self-hosted web application for cataloging and displaying your personal collection of physical video media (Blu-rays, 4K UHDs, DVDs, LaserDiscs, and VHS).
 
 ## 🐳 Docker Quick Start (Recommended)
 
@@ -19,16 +19,24 @@ docker-compose --env-file .env.docker up -d
 
 **That's it!** Your collection is now running in a single container (~100MB RAM, ~150MB disk) with:
 - ✅ Automatic database migrations
-- ✅ Persistent data storage
+- ✅ Persistent data storage  
 - ✅ Frontend + Backend in one simple container
+- ✅ All new features included (LaserDisc/VHS, CSV Import/Export)
 
-📖 See [DOCKER.md](DOCKER.md) for detailed Docker documentation, backup procedures, and troubleshooting.
+**Optional**: Validate your Docker setup before building:
+```bash
+./validate-docker.sh
+```
+
+📖 See [DOCKER_QUICKSTART.md](DOCKER_QUICKSTART.md) for quick start guide, [DOCKER.md](DOCKER.md) for detailed Docker documentation.
 
 ---
 
 ## Features
 
 - **Media Management**: Add, edit, and delete entries with TMDb API integration
+- **Multiple Formats**: Support for 4K UHD, Blu-ray, DVD, LaserDisc, and VHS
+- **Import/Export**: Backup and restore your collection via CSV files
 - **Beautiful Gallery**: Responsive collection view with cover art and filtering
 - **Privacy Control**: Public or private collection visibility
 - **Custom Metadata**: Track physical format, edition details, and personal photos
@@ -138,6 +146,8 @@ Cineshelf/
 
 - **TMDb API Integration**: Search movies and automatically populate metadata
 - **Media CRUD Operations**: Full create, read, update, and delete functionality
+- **Multiple Physical Formats**: Support for 4K UHD, Blu-ray, DVD, LaserDisc, and VHS
+- **CSV Import/Export**: Backup and restore your collection with full metadata
 - **File Upload**: Upload custom images for your physical media
 - **Authentication**: Password-protected admin panel
 - **Collection Gallery**: Beautiful responsive grid view with cover art
@@ -153,6 +163,9 @@ Cineshelf/
 4. **Manage Collection**: Edit or delete items from the admin panel
 5. **View Collection**: Browse your collection at `/collection` with filtering and sorting
 6. **Privacy Settings**: Toggle collection visibility in admin settings
+7. **Import/Export**: Backup your collection or import from CSV (Admin → Settings → Import/Export)
+
+📄 See [CSV_FORMAT_GUIDE.md](CSV_FORMAT_GUIDE.md) for detailed CSV format documentation.
 
 ## API Endpoints
 
@@ -177,6 +190,12 @@ Cineshelf/
 - `GET /api/settings/:key` - Get specific setting
 - `PUT /api/settings/:key` - Update setting (protected)
 - `POST /api/settings` - Update multiple settings (protected)
+
+### Import/Export
+- `GET /api/import-export/schema` - Get CSV format documentation
+- `GET /api/import-export/export` - Export collection as CSV (protected)
+- `POST /api/import-export/validate` - Validate CSV before import (protected)
+- `POST /api/import-export/import` - Import CSV file (protected)
 
 ## License
 

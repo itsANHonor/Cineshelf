@@ -9,12 +9,14 @@ interface MediaCardProps {
 const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
   const imageUrl = media.custom_image_url || media.cover_art_url;
   const formatColors: Record<string, string> = {
-    '4K UHD': 'bg-blue-100 text-blue-800',
-    'Blu-ray': 'bg-green-100 text-green-800',
-    'DVD': 'bg-orange-100 text-orange-800',
+    '4K UHD': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'Blu-ray': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'DVD': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'LaserDisc': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'VHS': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
   };
 
-  const formatColor = formatColors[media.physical_format] || 'bg-gray-100 text-gray-800';
+  const getFormatColor = (format: string) => formatColors[format] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
 
   return (
     <div
@@ -48,11 +50,13 @@ const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
           </div>
         )}
         
-        {/* Format Badge */}
-        <div className="absolute top-2 right-2">
-          <span className={`${formatColor} text-xs font-medium px-2 py-1 rounded`}>
-            {media.physical_format}
-          </span>
+        {/* Format Badges */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+          {media.physical_format.map((format, idx) => (
+            <span key={idx} className={`${getFormatColor(format)} text-xs font-medium px-2 py-1 rounded shadow-sm`}>
+              {format}
+            </span>
+          ))}
         </div>
       </div>
 

@@ -180,6 +180,32 @@ class ApiService {
     const response = await this.api.post<Settings>('/settings', settings);
     return response.data;
   }
+
+  // Import/Export methods
+  async getImportExportSchema(): Promise<any> {
+    const response = await this.api.get('/import-export/schema');
+    return response.data;
+  }
+
+  async exportCollection(): Promise<Blob> {
+    const response = await this.api.get('/import-export/export', {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  async validateCSV(csvData: string): Promise<any> {
+    const response = await this.api.post('/import-export/validate', { csv_data: csvData });
+    return response.data;
+  }
+
+  async importCollection(csvData: string, mode: 'add' | 'replace' = 'add'): Promise<any> {
+    const response = await this.api.post('/import-export/import', { 
+      csv_data: csvData,
+      mode,
+    });
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();

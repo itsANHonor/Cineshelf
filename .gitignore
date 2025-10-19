@@ -25,6 +25,9 @@ build/
 # Uploads
 uploads/
 
+# Data directory (contains database and uploads for Docker)
+data/
+
 # IDE
 .vscode/
 .idea/
