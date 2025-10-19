@@ -49,3 +49,10 @@ coverage/
 tmp/
 temp/
 
+# Documentation - ignore most .md files except key ones
+*.md
+!README.md
+!QUICK_START.md
+!SETUP.md
+!DOCKER.md
+
