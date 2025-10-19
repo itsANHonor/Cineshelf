@@ -2,7 +2,7 @@
 
 ## Summary
 
-Display Case has been **fully containerized** with production-ready Docker configuration. The application can now be deployed with a single command and includes comprehensive documentation, helper scripts, and best practices.
+Cineshelf has been **fully containerized** with production-ready Docker configuration. The application can now be deployed with a single command and includes comprehensive documentation, helper scripts, and best practices.
 
 ## ✅ What Was Completed
 
@@ -91,7 +91,7 @@ docker-compose --env-file .env.docker up -d
 │  - Proxies /uploads to backend          │
 │  - Port 80 (internal)                   │
 └───────────────┬─────────────────────────┘
-                │ displaycase-network
+                │ cineshelf-network
 ┌───────────────▼─────────────────────────┐
 │         Backend Container (Node.js)     │
 │  - Express API server                   │
@@ -170,7 +170,7 @@ To verify the Docker implementation works:
 docker-compose build
 
 # 2. Check images exist
-docker images | grep displaycase
+docker images | grep cineshelf
 
 # 3. Start services
 docker-compose --env-file .env.docker up -d
@@ -228,7 +228,7 @@ docker-compose down
 docker-compose logs -f
 
 # Backup
-docker cp displaycase-server:/app/data/database.sqlite backups/
+docker cp cineshelf-server:/app/data/database.sqlite backups/
 ```
 
 ## 📈 Before & After
@@ -304,7 +304,7 @@ All requirements from the original plan have been met:
 
 ## 🎊 Final Result
 
-Display Case is now:
+Cineshelf is now:
 - ✅ **Fully containerized**
 - ✅ **Production-ready**
 - ✅ **Well-documented**
@@ -318,7 +318,7 @@ Display Case is now:
 ```bash
 # 1. Clone repo
 git clone <repo-url>
-cd DisplayCase
+cd cineshelf
 
 # 2. Configure
 cp env.docker.example .env.docker

@@ -2,26 +2,18 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import HomePage from './pages/HomePage';
+import AboutPage from './pages/AboutPage';
 import AdminPage from './pages/AdminPage';
 import CollectionPage from './pages/CollectionPage';
-
-interface HealthCheck {
-  status: string;
-  timestamp: string;
-  version: string;
-}
+import Navigation from './components/Navigation';
 
 function App() {
-  const [health, setHealth] = useState<HealthCheck | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check if the backend is available
     fetch('/api/health')
-      .then(res => res.json())
-      .then((data: HealthCheck) => {
-        setHealth(data);
+      .then(() => {
         setIsLoading(false);
       })
       .catch(err => {
@@ -35,7 +27,7 @@ function App() {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Display Case...</p>
+          <p className="text-gray-600">Loading Cineshelf...</p>
         </div>
       </div>
     );
@@ -46,9 +38,10 @@ function App() {
       <AuthProvider>
         <Router>
           <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800">
+            <Navigation />
             <Routes>
-              <Route path="/" element={<HomePage health={health} />} />
-              <Route path="/collection" element={<CollectionPage />} />
+              <Route path="/" element={<CollectionPage />} />
+              <Route path="/about" element={<AboutPage />} />
               <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </div>

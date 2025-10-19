@@ -1,6 +1,6 @@
-# Display Case - Deployment Options
+# Cineshelf - Deployment Options
 
-Display Case can be deployed in two ways. Choose the method that best fits your needs.
+Cineshelf can be deployed in two ways. Choose the method that best fits your needs.
 
 ## 🐳 Option 1: Docker Deployment (Recommended)
 
@@ -164,8 +164,8 @@ Your existing database and uploads can be copied to Docker volume if needed.
 docker-compose down
 
 # Copy data from volume (optional)
-docker cp displaycase-server:/app/data/database.sqlite server/
-docker cp displaycase-server:/app/data/uploads server/
+docker cp cineshelf-server:/app/data/database.sqlite server/
+docker cp cineshelf-server:/app/data/uploads server/
 
 # Start manual servers
 cd server && npm run dev

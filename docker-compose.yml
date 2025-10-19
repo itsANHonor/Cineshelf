@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  displaycase:
+  cineshelf:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: displaycase
+    container_name: cineshelf
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
@@ -25,11 +25,11 @@ services:
       retries: 3
       start_period: 40s
     labels:
-      - "com.displaycase.description=Display Case - Homelab Media Collection Manager"
+      - "com.cineshelf.description=Cineshelf - Homelab Media Collection Manager"
 
 volumes:
   data:
     driver: local
     labels:
-      - "com.displaycase.description=Persistent storage for database and uploads"
+      - "com.cineshelf.description=Persistent storage for database and uploads"
 

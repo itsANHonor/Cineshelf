@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Display Case - Docker Build Script
+# Cineshelf - Docker Build Script
 # Builds the unified Docker image
 
 set -e
 
-echo "🎬 Display Case - Building Docker Image"
-echo "======================================="
+echo "🎬 Cineshelf - Building Docker Image"
+echo "======================================"
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
@@ -31,11 +31,11 @@ echo ""
 echo "✅ Build complete!"
 echo ""
 echo "Image created:"
-docker images | grep -E "displaycase|REPOSITORY"
+docker images | grep -E "cineshelf|REPOSITORY"
 
 echo ""
 echo "📊 Image size:"
-docker images displaycase --format "{{.Size}}"
+docker images cineshelf --format "{{.Size}}"
 
 echo ""
 echo "To start the application, run:"

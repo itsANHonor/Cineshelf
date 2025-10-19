@@ -2,7 +2,7 @@
 
 ## 🎯 What Changed
 
-Display Case has been **simplified from 2 containers to 1 container** - perfect for homelab use!
+Cineshelf has been **simplified from 2 containers to 1 container** - perfect for homelab use!
 
 ### Before (Over-engineered)
 ```
@@ -23,7 +23,7 @@ Total: 2 containers, ~300MB RAM
 ### After (Simplified)
 ```
 ┌─────────────────────────┐
-│  Display Case          │
+│  Cineshelf             │
 │  (Node.js Express)     │
 │  Serves: Frontend +    │
 │          API +         │
@@ -37,10 +37,10 @@ Total: 1 container, ~100MB RAM
 
 ### Simplicity
 - **One Dockerfile** instead of two (client/ + server/)
-- **One container** to manage (`displaycase` instead of `displaycase-client` + `displaycase-server`)
+- **One container** to manage (`cineshelf` instead of `cineshelf-client` + `cineshelf-server`)
 - **No nginx configuration** - Express serves everything
 - **No internal networking** - everything in one process
-- **Simpler logs**: `docker logs displaycase` instead of checking two containers
+- **Simpler logs**: `docker logs cineshelf` instead of checking two containers
 
 ### Resource Usage
 - **Memory**: ~100MB (vs ~300MB)
@@ -56,8 +56,8 @@ docker-compose exec server sh  # Backend shell
 docker-compose exec client sh  # Frontend shell
 
 # After
-docker logs -f displaycase     # Check everything
-docker exec -it displaycase sh # Single shell
+docker logs -f cineshelf     # Check everything
+docker exec -it cineshelf sh # Single shell
 ```
 
 ## 🏗️ Technical Details
@@ -113,7 +113,7 @@ docker exec -it displaycase sh # Single shell
 | **Containers** | 2 | 1 |
 | **Dockerfiles** | 2 | 1 |
 | **Config Files** | 3 (2 Dockerfiles + nginx.conf) | 1 (Dockerfile) |
-| **Services** | client + server | displaycase |
+| **Services** | client + server | cineshelf |
 | **Ports** | 3000 (client), 3001 (server internal) | 3000 |
 | **RAM** | ~300MB | ~100MB |
 | **Disk** | ~300MB | ~150MB |
@@ -151,7 +151,7 @@ git pull
 docker-compose --env-file .env.docker up -d
 ```
 
-**Your data persists automatically!** The volume name changed from `displaycase_server_data` to `displaycase_data`, but Docker will handle the migration.
+**Your data persists automatically!** The volume name changed from `cineshelf_server_data` to `cineshelf_data`, but Docker will handle the migration.
 
 ## 💡 Why This Makes Sense
 
@@ -187,7 +187,7 @@ All documentation has been updated:
 
 ## ✨ Result
 
-Display Case is now a **proper homelab application**:
+Cineshelf is now a **proper homelab application**:
 - Simple single-container deployment
 - Low resource usage
 - Easy to understand and maintain

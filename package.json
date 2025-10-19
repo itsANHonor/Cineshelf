@@ -1,5 +1,5 @@
 {
-  "name": "display-case",
+  "name": "cineshelf",
   "version": "1.0.0",
   "description": "A self-hosted web application for cataloging and displaying physical video media collections",
   "main": "index.js",

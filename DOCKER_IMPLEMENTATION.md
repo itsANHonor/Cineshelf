@@ -2,7 +2,7 @@
 
 ## Overview
 
-Display Case is now fully containerized with Docker support, enabling one-command deployment with persistent data storage, automated migrations, and production-ready configuration.
+Cineshelf is now fully containerized with Docker support, enabling one-command deployment with persistent data storage, automated migrations, and production-ready configuration.
 
 ## ✅ What Was Implemented
 
@@ -61,7 +61,7 @@ Display Case is now fully containerized with Docker support, enabling one-comman
 
 **docker-compose.yml**
 - Defines both `server` and `client` services
-- Internal network: `displaycase-network`
+- Internal network: `cineshelf-network`
 - Named volume: `server_data` for persistence
 - Health check dependencies (client waits for server)
 - Restart policy: `unless-stopped`
@@ -164,7 +164,7 @@ docker-compose --env-file .env.docker up -d
 ## 📊 File Structure
 
 ```
-DisplayCase/
+cineshelf/
 ├── docker-compose.yml          # Orchestration configuration
 ├── env.docker.example          # Environment template
 ├── DOCKER.md                   # Docker documentation
@@ -297,7 +297,7 @@ Potential improvements:
 
 ## 🎉 Conclusion
 
-Display Case is now fully containerized and production-ready! The Docker implementation provides:
+Cineshelf is now fully containerized and production-ready! The Docker implementation provides:
 
 - **Simplicity**: One command to deploy
 - **Reliability**: Automated setup and health checks

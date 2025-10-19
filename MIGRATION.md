@@ -10,16 +10,16 @@ If you were using the old 2-container setup, here's how to migrate to the new si
 docker-compose down
 ```
 
-This stops both the old `displaycase-client` and `displaycase-server` containers.
+This stops both the old `cineshelf-client` and `cineshelf-server` containers.
 
 ### 2. Optional: Backup Your Data
 
 ```bash
 # Backup database
-docker cp displaycase-server:/app/data/database.sqlite backups/database-backup.sqlite
+docker cp cineshelf-server:/app/data/database.sqlite backups/database-backup.sqlite
 
 # Backup uploads
-docker cp displaycase-server:/app/data/uploads backups/uploads-backup
+docker cp cineshelf-server:/app/data/uploads backups/uploads-backup
 ```
 
 **Note**: This is optional since volumes persist, but recommended for safety!
@@ -47,10 +47,10 @@ docker-compose --env-file .env.docker up -d
 # Check container status
 docker-compose ps
 
-# Should show 1 container named "displaycase" running
+# Should show 1 container named "cineshelf" running
 
 # View logs
-docker logs -f displaycase
+docker logs -f cineshelf
 
 # Access the application
 open http://localhost:3000
@@ -59,15 +59,15 @@ open http://localhost:3000
 ## 🎯 What Changed
 
 ### Container Names
-- **Old**: `displaycase-client`, `displaycase-server`
-- **New**: `displaycase`
+- **Old**: `cineshelf-client`, `cineshelf-server`
+- **New**: `cineshelf`
 
 ### Commands
 | Old | New |
 |-----|-----|
-| `docker logs displaycase-client` | `docker logs displaycase` |
-| `docker logs displaycase-server` | `docker logs displaycase` |
-| `docker exec -it displaycase-server sh` | `docker exec -it displaycase sh` |
+| `docker logs cineshelf-client` | `docker logs cineshelf` |
+| `docker logs cineshelf-server` | `docker logs cineshelf` |
+| `docker exec -it cineshelf-server sh` | `docker exec -it cineshelf sh` |
 | `docker-compose logs -f server` | `docker-compose logs -f` |
 
 ### Ports
@@ -75,8 +75,8 @@ open http://localhost:3000
 - **New**: Everything on 3000
 
 ### Volumes
-- **Old**: `displaycase_server_data`
-- **New**: `displaycase_data`
+- **Old**: `cineshelf_server_data`
+- **New**: `cineshelf_data`
 
 **Note**: Docker Compose will automatically handle the volume transition.
 
@@ -97,19 +97,19 @@ If for some reason you need to manually migrate data:
 docker-compose down
 
 # Create new volume
-docker volume create displaycase_data
+docker volume create cineshelf_data
 
 # Copy data from old volume to new
 docker run --rm \
-  -v displaycase_server_data:/source \
-  -v displaycase_data:/dest \
+  -v cineshelf_server_data:/source \
+  -v cineshelf_data:/dest \
   alpine sh -c "cp -av /source/. /dest/"
 
 # Start new container
 docker-compose --env-file .env.docker up -d
 
 # Verify data
-docker exec displaycase ls -la /data/
+docker exec cineshelf ls -la /data/
 ```
 
 ## 🆘 Troubleshooting
@@ -129,10 +129,10 @@ docker-compose --env-file .env.docker up -d
 
 ```bash
 # List volumes
-docker volume ls | grep displaycase
+docker volume ls | grep cineshelf
 
 # If you see old volume, inspect it
-docker volume inspect displaycase_server_data
+docker volume inspect cineshelf_server_data
 
 # Copy data manually (see above)
 ```
@@ -158,7 +158,7 @@ After migration, verify:
 - [ ] Frontend loads: `open http://localhost:3000`
 - [ ] Can login to admin: http://localhost:3000/admin
 - [ ] Your collection displays: http://localhost:3000/collection
-- [ ] Database has your data: `docker exec displaycase ls -la /data/`
+- [ ] Database has your data: `docker exec cineshelf ls -la /data/`
 - [ ] Uploads are accessible: Check if images display
 
 ## 💡 Benefits of New Setup

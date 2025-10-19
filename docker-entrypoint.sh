@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-echo "🎬 Display Case - Starting..."
-echo "=============================="
+echo "🎬 Cineshelf - Starting..."
+echo "==========================="
 
 # Ensure data directories exist
 echo "📁 Creating data directories..."
@@ -39,8 +39,8 @@ else
 fi
 
 echo ""
-echo "🚀 Starting Display Case server..."
-echo "=================================="
+echo "🚀 Starting Cineshelf server..."
+echo "================================"
 echo "📡 Frontend: http://localhost:$PORT"
 echo "📡 API: http://localhost:$PORT/api"
 echo "📡 Admin: http://localhost:$PORT/admin"

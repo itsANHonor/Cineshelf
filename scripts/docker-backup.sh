@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Display Case - Docker Backup Script
+# Cineshelf - Docker Backup Script
 # Backs up database and uploaded files
 
 set -e
 
-echo "🎬 Display Case - Backup Script"
-echo "==============================="
+echo "🎬 Cineshelf - Backup Script"
+echo "=============================="
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
@@ -25,8 +25,8 @@ mkdir -p "$BACKUP_DIR"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
 # Check if container is running
-if ! docker ps | grep -q "displaycase"; then
-    echo "⚠️  Warning: displaycase container is not running"
+if ! docker ps | grep -q "cineshelf"; then
+    echo "⚠️  Warning: cineshelf container is not running"
     echo "Starting container..."
     docker-compose --env-file .env.docker up -d
     sleep 5
@@ -35,7 +35,7 @@ fi
 echo ""
 echo "💾 Backing up database..."
 DB_BACKUP="$BACKUP_DIR/database-$TIMESTAMP.sqlite"
-docker cp displaycase:/data/database.sqlite "$DB_BACKUP"
+docker cp cineshelf:/data/database.sqlite "$DB_BACKUP"
 
 if [ -f "$DB_BACKUP" ]; then
     DB_SIZE=$(ls -lh "$DB_BACKUP" | awk '{print $5}')
@@ -48,7 +48,7 @@ fi
 echo ""
 echo "📸 Backing up uploaded images..."
 UPLOADS_BACKUP="$BACKUP_DIR/uploads-$TIMESTAMP"
-docker cp displaycase:/data/uploads "$UPLOADS_BACKUP"
+docker cp cineshelf:/data/uploads "$UPLOADS_BACKUP"
 
 if [ -d "$UPLOADS_BACKUP" ]; then
     UPLOAD_COUNT=$(find "$UPLOADS_BACKUP" -type f | wc -l)
@@ -60,7 +60,7 @@ fi
 
 echo ""
 echo "📦 Creating compressed archive..."
-ARCHIVE="$BACKUP_DIR/displaycase-backup-$TIMESTAMP.tar.gz"
+ARCHIVE="$BACKUP_DIR/cineshelf-backup-$TIMESTAMP.tar.gz"
 tar -czf "$ARCHIVE" -C "$BACKUP_DIR" \
     "database-$TIMESTAMP.sqlite" \
     "uploads-$TIMESTAMP" 2>/dev/null || true
@@ -81,8 +81,8 @@ if [ -f "$ARCHIVE" ]; then
     echo "To restore this backup:"
     echo "  1. Stop the application: docker-compose down"
     echo "  2. Extract archive: tar -xzf $ARCHIVE -C $BACKUP_DIR"
-    echo "  3. Restore database: docker cp $BACKUP_DIR/database-$TIMESTAMP.sqlite displaycase:/data/database.sqlite"
-    echo "  4. Restore uploads: docker cp $BACKUP_DIR/uploads-$TIMESTAMP/. displaycase:/data/uploads/"
+    echo "  3. Restore database: docker cp $BACKUP_DIR/database-$TIMESTAMP.sqlite cineshelf:/data/database.sqlite"
+    echo "  4. Restore uploads: docker cp $BACKUP_DIR/uploads-$TIMESTAMP/. cineshelf:/data/uploads/"
     echo "  5. Restart: docker-compose --env-file .env.docker up -d"
 else
     echo "❌ Error: Failed to create archive"

@@ -2,7 +2,7 @@
 
 ## 🎉 Summary
 
-Display Case has been successfully simplified from a **2-container architecture** to a **single lightweight container** - perfect for homelab use!
+Cineshelf has been successfully simplified from a **2-container architecture** to a **single lightweight container** - perfect for homelab use!
 
 ## ✅ What Was Implemented
 
@@ -43,7 +43,7 @@ Display Case has been successfully simplified from a **2-container architecture*
 │  Serves: React static   │
 │  Proxies: /api → server │
 └────────┬────────────────┘
-         │ displaycase-network
+         │ cineshelf-network
 ┌────────▼────────────────┐
 │  Node.js Container      │  Port 3001 (internal)
 │  Serves: API only       │
@@ -77,16 +77,16 @@ But now it's even faster and uses less resources!
 
 **Before**:
 ```bash
-docker logs displaycase-client    # Frontend logs
-docker logs displaycase-server    # Backend logs
-docker exec -it displaycase-server sh
+docker logs cineshelf-client    # Frontend logs
+docker logs cineshelf-server    # Backend logs
+docker exec -it cineshelf-server sh
 docker-compose ps  # Shows 2 containers
 ```
 
 **After**:
 ```bash
-docker logs displaycase           # All logs in one place
-docker exec -it displaycase sh
+docker logs cineshelf           # All logs in one place
+docker exec -it cineshelf sh
 docker-compose ps  # Shows 1 container
 ```
 
@@ -141,7 +141,7 @@ All on one port (3000):
 
 ### View Logs
 ```bash
-docker logs -f displaycase
+docker logs -f cineshelf
 ```
 
 ### Backup Data
@@ -233,7 +233,7 @@ The 2-container setup made sense for:
 - ❌ CDN integration
 - ❌ Load balancing
 
-But Display Case is:
+But Cineshelf is:
 - ✅ Personal homelab service
 - ✅ Thousands of items max
 - ✅ Single user (admin)
@@ -254,7 +254,7 @@ For a homelab media collection:
 
 ## 🎉 Final Result
 
-Display Case is now a **properly-sized homelab application**:
+Cineshelf is now a **properly-sized homelab application**:
 
 - ✅ Single lightweight container
 - ✅ ~100MB RAM usage

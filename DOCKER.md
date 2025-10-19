@@ -1,8 +1,8 @@
-# Display Case - Docker Deployment Guide
+# Cineshelf - Docker Deployment Guide
 
 ## 🐳 Quick Start
 
-Deploy Display Case with Docker in 3 simple steps:
+Deploy Cineshelf with Docker in 3 simple steps:
 
 ```bash
 # 1. Copy and configure environment variables
@@ -20,7 +20,7 @@ That's it! The application is now running as a **single lightweight container** 
 
 ## 🏠 Why Single Container?
 
-Display Case uses a simplified **single-container architecture** perfect for homelab use:
+Cineshelf uses a simplified **single-container architecture** perfect for homelab use:
 
 - ✅ **Simple**: One container to manage instead of two
 - ✅ **Lightweight**: ~100MB RAM usage, ~150MB disk space
@@ -90,7 +90,7 @@ Check if container is running:
 docker-compose ps
 ```
 
-You should see `displaycase` running and healthy.
+You should see `cineshelf` running and healthy.
 
 View logs:
 ```bash
@@ -99,7 +99,7 @@ docker-compose logs -f
 
 Or using Docker directly:
 ```bash
-docker logs -f displaycase
+docker logs -f cineshelf
 ```
 
 ### 5. Access the Application
@@ -151,22 +151,22 @@ docker-compose logs -f
 
 ```bash
 # Access container shell
-docker-compose exec displaycase sh
+docker-compose exec cineshelf sh
 
 # Or using Docker directly
-docker exec -it displaycase sh
+docker exec -it cineshelf sh
 
 # Run database migrations manually
-docker-compose exec displaycase npm run migrate:latest
+docker-compose exec cineshelf npm run migrate:latest
 ```
 
 ## 💾 Data Persistence
 
 ### Understanding Volumes
 
-Display Case uses a named Docker volume to persist data:
+Cineshelf uses a named Docker volume to persist data:
 
-- **Volume Name**: `displaycase_data`
+- **Volume Name**: `cineshelf_data`
 - **Mounted at**: `/data` inside the container
 - **Contains**: 
   - SQLite database (`database.sqlite`)
@@ -182,7 +182,7 @@ Create a backup:
 mkdir -p backups
 
 # Copy database from container
-docker cp displaycase:/data/database.sqlite backups/database-$(date +%Y%m%d-%H%M%S).sqlite
+docker cp cineshelf:/data/database.sqlite backups/database-$(date +%Y%m%d-%H%M%S).sqlite
 ```
 
 ### Restore Database
@@ -193,13 +193,13 @@ Restore from backup:
 docker-compose down
 
 # Remove existing volume
-docker volume rm displaycase_data
+docker volume rm cineshelf_data
 
 # Start the application
 docker-compose --env-file .env.docker up -d
 
 # Wait for container to be ready, then restore
-docker cp backups/your-backup.sqlite displaycase:/data/database.sqlite
+docker cp backups/your-backup.sqlite cineshelf:/data/database.sqlite
 
 # Restart container
 docker-compose restart
@@ -209,7 +209,7 @@ docker-compose restart
 
 ```bash
 # Create backup of uploads directory
-docker cp displaycase:/data/uploads backups/uploads-$(date +%Y%m%d-%H%M%S)
+docker cp cineshelf:/data/uploads backups/uploads-$(date +%Y%m%d-%H%M%S)
 ```
 
 ### Export All Data
@@ -217,7 +217,7 @@ docker cp displaycase:/data/uploads backups/uploads-$(date +%Y%m%d-%H%M%S)
 ```bash
 # Export entire data volume
 docker run --rm \
-  -v displaycase_data:/data \
+  -v cineshelf_data:/data \
   -v $(pwd)/backups:/backup \
   alpine tar czf /backup/data-backup-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
 ```
@@ -227,7 +227,7 @@ docker run --rm \
 ```bash
 # Import data volume backup
 docker run --rm \
-  -v displaycase_data:/data \
+  -v cineshelf_data:/data \
   -v $(pwd)/backups:/backup \
   alpine tar xzf /backup/your-backup.tar.gz -C /data
 ```
@@ -240,7 +240,7 @@ docker run --rm \
 ```bash
 docker-compose logs
 # Or
-docker logs displaycase
+docker logs cineshelf
 ```
 
 **Common issues:**
@@ -261,7 +261,7 @@ docker logs displaycase
    ```bash
    # Reset permissions
    docker-compose down
-   docker volume rm displaycase_data
+   docker volume rm cineshelf_data
    docker-compose --env-file .env.docker up -d
    ```
 
@@ -269,13 +269,13 @@ docker logs displaycase
 
 ```bash
 # Check if database file exists
-docker exec displaycase ls -la /data/
+docker exec cineshelf ls -la /data/
 
 # Run migrations manually
-docker exec displaycase npm run migrate:latest
+docker exec cineshelf npm run migrate:latest
 
 # Check migration status
-docker exec displaycase npx knex migrate:currentVersion
+docker exec cineshelf npx knex migrate:currentVersion
 ```
 
 ### TMDb API Not Working
@@ -283,7 +283,7 @@ docker exec displaycase npx knex migrate:currentVersion
 1. Verify API key in `.env.docker`
 2. Check logs for API errors:
    ```bash
-   docker logs displaycase | grep -i tmdb
+   docker logs cineshelf | grep -i tmdb
    ```
 3. Test API key manually:
    ```bash
@@ -302,7 +302,7 @@ docker exec displaycase npx knex migrate:currentVersion
 
 1. Check if uploads directory exists:
    ```bash
-   docker exec displaycase ls -la /data/uploads/
+   docker exec cineshelf ls -la /data/uploads/
    ```
 
 2. Verify Express is serving uploads:
@@ -312,7 +312,7 @@ docker exec displaycase npx knex migrate:currentVersion
 
 3. Check permissions:
    ```bash
-   docker exec displaycase ls -la /data/
+   docker exec cineshelf ls -la /data/
    ```
 
 ### Container Health Check Failing
@@ -377,7 +377,7 @@ curl http://localhost:3000/api/health
 
 2. **Container stats**:
    ```bash
-   docker stats displaycase-server displaycase-client
+   docker stats cineshelf-server cineshelf-client
    ```
 
 3. **Health checks**:
@@ -438,7 +438,7 @@ docker ps -a
 docker volume ls
 
 # Inspect volume
-docker volume inspect displaycase_server_data
+docker volume inspect cineshelf_server_data
 
 # View networks
 docker network ls
@@ -450,8 +450,8 @@ docker system prune -a
 docker images
 
 # Remove specific image
-docker rmi displaycase-server
-docker rmi displaycase-client
+docker rmi cineshelf-server
+docker rmi cineshelf-client
 
 # Follow logs for specific service
 docker-compose logs -f server
@@ -469,7 +469,7 @@ If you encounter issues:
 
 1. Check logs: `docker-compose logs -f`
 2. Verify environment: `cat .env.docker`
-3. Check volumes: `docker volume inspect displaycase_server_data`
+3. Check volumes: `docker volume inspect cineshelf_server_data`
 4. Review documentation: `README.md`, `SETUP.md`
 5. Test health: `curl http://localhost:3000/api/health`
 
@@ -478,7 +478,7 @@ If you encounter issues:
 - [Docker Documentation](https://docs.docker.com/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [TMDb API Documentation](https://developers.themoviedb.org/3)
-- [Display Case GitHub Repository](https://github.com/yourusername/displaycase)
+- [Cineshelf GitHub Repository](https://github.com/yourusername/cineshelf)
 
 ---
 

@@ -1,17 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
-interface HealthCheck {
-  status: string;
-  timestamp: string;
-  version: string;
-}
-
-interface HomePageProps {
-  health: HealthCheck | null;
-}
-
-const HomePage: React.FC<HomePageProps> = ({ health }) => {
+const AboutPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="max-w-4xl mx-auto text-center">
@@ -28,7 +17,7 @@ const HomePage: React.FC<HomePageProps> = ({ health }) => {
               <path d="M17 7.5h4"/>
               <path d="M17 16.5h4"/>
             </svg>
-            <h1 className="text-6xl font-bold text-gray-900 dark:text-gray-100">Display Case</h1>
+            <h1 className="text-6xl font-bold text-gray-900 dark:text-gray-100">Cineshelf</h1>
           </div>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
             A beautiful, modern way to catalog and showcase your physical media collection
@@ -38,32 +27,6 @@ const HomePage: React.FC<HomePageProps> = ({ health }) => {
           </p>
         </div>
 
-        {/* Status */}
-        {health && (
-          <div className="mb-12">
-            <div className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
-              <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mr-2 animate-pulse"></div>
-              <span className="font-medium">Backend Connected</span>
-              <span className="ml-2 text-sm opacity-75">v{health.version}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
-          <Link
-            to="/collection"
-            className="btn-primary inline-block w-full sm:w-auto text-lg py-3 px-8"
-          >
-            View Collection
-          </Link>
-          <Link
-            to="/admin"
-            className="btn-secondary inline-block w-full sm:w-auto text-lg py-3 px-8"
-          >
-            Admin Panel
-          </Link>
-        </div>
 
         {/* Features */}
         <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -108,4 +71,4 @@ const HomePage: React.FC<HomePageProps> = ({ health }) => {
   );
 };
 
-export default HomePage;
+export default AboutPage;

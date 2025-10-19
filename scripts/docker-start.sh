@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Display Case - Docker Start Script
+# Cineshelf - Docker Start Script
 # Starts the application with docker-compose
 
 set -e
 
-echo "🎬 Display Case - Starting Application"
-echo "======================================"
+echo "🎬 Cineshelf - Starting Application"
+echo "====================================="
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
@@ -44,7 +44,7 @@ if [ ! -f .env.docker ]; then
 fi
 
 # Check if images exist
-if ! docker images | grep -q "displaycase"; then
+if ! docker images | grep -q "cineshelf"; then
     echo "📦 Images not found. Building..."
     docker-compose build
 fi
@@ -62,7 +62,7 @@ echo ""
 docker-compose ps
 
 echo ""
-echo "✅ Display Case is running!"
+echo "✅ Cineshelf is running!"
 echo ""
 echo "📱 Access the application:"
 echo "   Frontend: http://localhost:3000"

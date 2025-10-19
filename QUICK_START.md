@@ -1,4 +1,4 @@
-# Display Case - Quick Start Guide
+# Cineshelf - Quick Start Guide
 
 ## 🚀 Get Running in 5 Minutes
 
@@ -103,7 +103,7 @@ npm run migrate:latest
 ## 📚 File Structure
 
 ```
-DisplayCase/
+cineshelf/
 ├── server/
 │   ├── src/
 │   │   ├── routes/          # API endpoints

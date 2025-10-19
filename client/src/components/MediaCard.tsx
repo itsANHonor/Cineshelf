@@ -64,6 +64,11 @@ const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
             {new Date(media.release_date).getFullYear()}
           </p>
         )}
+        {media.series && media.series.length > 0 && (
+          <p className="text-xs text-primary-600 dark:text-primary-400 mt-1 line-clamp-1">
+            {media.series.map(s => s.name).join(', ')}
+          </p>
+        )}
         {media.edition_notes && (
           <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 italic line-clamp-1">{media.edition_notes}</p>
         )}

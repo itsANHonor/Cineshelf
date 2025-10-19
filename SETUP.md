@@ -1,4 +1,4 @@
-# Display Case - Setup Guide
+# Cineshelf - Setup Guide
 
 ## Prerequisites
 

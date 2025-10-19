@@ -83,7 +83,7 @@ docker compose down
 docker compose --env-file .env.docker up -d --build
 
 # Check logs
-docker logs displaycase --follow
+docker logs cineshelf --follow
 ```
 
 ### Test Dark Mode
@@ -130,7 +130,7 @@ Migrations will run automatically when the container starts. The entrypoint scri
 
 If you need to run migrations manually:
 ```bash
-docker exec -it displaycase npm run migrate:latest
+docker exec -it cineshelf npm run migrate:latest
 ```
 
 ## Verification Checklist
@@ -163,13 +163,13 @@ None! Everything specified in the plan has been implemented.
 ### Migrations Fail
 ```bash
 # Check migration status
-docker exec -it displaycase npm run migrate:status
+docker exec -it cineshelf npm run migrate:status
 
 # Rollback last migration
-docker exec -it displaycase npm run migrate:down
+docker exec -it cineshelf npm run migrate:down
 
 # Run migrations again
-docker exec -it displaycase npm run migrate:latest
+docker exec -it cineshelf npm run migrate:latest
 ```
 
 ### Theme Not Persisting

@@ -1,10 +1,10 @@
-# Display Case 🎬
+# Cineshelf 🎬
 
 A simple, clean, and modern self-hosted web application for cataloging and displaying your personal collection of physical video media (Blu-rays, 4K UHDs, and DVDs).
 
 ## 🐳 Docker Quick Start (Recommended)
 
-Deploy Display Case as a **single lightweight container** perfect for homelab use:
+Deploy Cineshelf as a **single lightweight container** perfect for homelab use:
 
 ```bash
 # 1. Copy and configure environment variables
@@ -60,7 +60,7 @@ Choose your preferred installation method:
 
 1. **Clone and install dependencies:**
    ```bash
-   cd DisplayCase
+   cd Cineshelf
    npm run install:all
    ```
 
@@ -99,7 +99,7 @@ Choose your preferred installation method:
 ## Project Structure
 
 ```
-DisplayCase/
+Cineshelf/
 ├── client/                 # React frontend
 │   ├── src/
 │   │   ├── components/     # Reusable components

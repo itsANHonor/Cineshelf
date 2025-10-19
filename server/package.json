@@ -1,7 +1,7 @@
 {
-  "name": "display-case-server",
+  "name": "cineshelf-server",
   "version": "1.0.0",
-  "description": "Backend server for Display Case media collection app",
+  "description": "Backend server for Cineshelf media collection app",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
