@@ -1,13 +1,15 @@
 import React from 'react';
-import { Media } from '../types';
+import { PhysicalItem } from '../types';
 
 interface MediaCardProps {
-  media: Media;
+  physicalItem: PhysicalItem;
   onClick?: () => void;
 }
 
-const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
-  const imageUrl = media.custom_image_url || media.cover_art_url;
+const MediaCard: React.FC<MediaCardProps> = ({ physicalItem, onClick }) => {
+  // Get primary media for display
+  const primaryMedia = physicalItem.media[0];
+  const imageUrl = physicalItem.custom_image_url || primaryMedia?.cover_art_url;
   const formatColors: Record<string, string> = {
     '4K UHD': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
     'Blu-ray': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -28,7 +30,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
         {imageUrl ? (
           <img
             src={imageUrl}
-            alt={media.title}
+            alt={physicalItem.name}
             className="w-full h-full object-cover"
             loading="lazy"
           />
@@ -52,29 +54,40 @@ const MediaCard: React.FC<MediaCardProps> = ({ media, onClick }) => {
         
         {/* Format Badges */}
         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-          {media.physical_format.map((format, idx) => (
+          {physicalItem.physical_format.map((format, idx) => (
             <span key={idx} className={`${getFormatColor(format)} text-xs font-medium px-2 py-1 rounded shadow-sm`}>
               {format}
             </span>
           ))}
         </div>
+        
+        {/* Multi-disc indicator */}
+        {physicalItem.media.length > 1 && (
+          <div className="absolute bottom-2 left-2">
+            <span className="bg-black bg-opacity-75 text-white text-xs font-medium px-2 py-1 rounded">
+              {physicalItem.media.length} movies
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Info */}
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-1">{media.title}</h3>
-        {media.release_date && (
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-1">
+          {primaryMedia?.title || physicalItem.name}
+        </h3>
+        {primaryMedia?.release_date && (
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {new Date(media.release_date).getFullYear()}
+            {new Date(primaryMedia.release_date).getFullYear()}
           </p>
         )}
-        {media.series && media.series.length > 0 && (
+        {primaryMedia?.series && primaryMedia.series.length > 0 && (
           <p className="text-xs text-primary-600 dark:text-primary-400 mt-1 line-clamp-1">
-            {media.series.map(s => s.name).join(', ')}
+            {primaryMedia.series.map(s => s.name).join(', ')}
           </p>
         )}
-        {media.edition_notes && (
-          <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 italic line-clamp-1">{media.edition_notes}</p>
+        {physicalItem.edition_notes && (
+          <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 italic line-clamp-1">{physicalItem.edition_notes}</p>
         )}
       </div>
     </div>

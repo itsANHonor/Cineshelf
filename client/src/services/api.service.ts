@@ -3,12 +3,18 @@ import {
   Media,
   CreateMediaDto,
   UpdateMediaDto,
+  PhysicalItem,
+  CreatePhysicalItemDto,
+  UpdatePhysicalItemDto,
   TMDbSearchResponse,
   TMDbMovieDetails,
   Settings,
   AuthResponse,
   FilterOptions,
   Series,
+  BulkSearchResponse,
+  BulkPhysicalItemDto,
+  BulkCreatePhysicalItemsResponse,
 } from '../types';
 
 class ApiService {
@@ -125,6 +131,58 @@ class ApiService {
 
   async getCollectionDetails(collectionId: number): Promise<any> {
     const response = await this.api.get(`/search/collections/${collectionId}`);
+    return response.data;
+  }
+
+  // Physical Items methods
+  async getPhysicalItems(filterOptions?: FilterOptions): Promise<PhysicalItem[]> {
+    const params: any = {};
+    if (filterOptions) {
+      if (filterOptions.format) params.format = filterOptions.format;
+      if (filterOptions.sort_by) params.sort_by = filterOptions.sort_by;
+      if (filterOptions.sort_order) params.sort_order = filterOptions.sort_order;
+    }
+    const response = await this.api.get<PhysicalItem[]>('/physical-items', { params });
+    return response.data;
+  }
+
+  async getPhysicalItemById(id: number): Promise<PhysicalItem> {
+    const response = await this.api.get<PhysicalItem>(`/physical-items/${id}`);
+    return response.data;
+  }
+
+  async createPhysicalItem(data: CreatePhysicalItemDto): Promise<PhysicalItem> {
+    const response = await this.api.post<PhysicalItem>('/physical-items', data);
+    return response.data;
+  }
+
+  async updatePhysicalItem(id: number, data: UpdatePhysicalItemDto): Promise<PhysicalItem> {
+    const response = await this.api.put<PhysicalItem>(`/physical-items/${id}`, data);
+    return response.data;
+  }
+
+  async deletePhysicalItem(id: number): Promise<void> {
+    await this.api.delete(`/physical-items/${id}`);
+  }
+
+  async addMediaLink(physicalItemId: number, media: any): Promise<PhysicalItem> {
+    const response = await this.api.post<PhysicalItem>(`/physical-items/${physicalItemId}/media`, { media });
+    return response.data;
+  }
+
+  async removeMediaLink(physicalItemId: number, mediaId: number): Promise<PhysicalItem> {
+    const response = await this.api.delete<PhysicalItem>(`/physical-items/${physicalItemId}/media/${mediaId}`);
+    return response.data;
+  }
+
+  async bulkCreatePhysicalItems(items: BulkPhysicalItemDto[]): Promise<BulkCreatePhysicalItemsResponse> {
+    const response = await this.api.post<BulkCreatePhysicalItemsResponse>('/physical-items/bulk', { items });
+    return response.data;
+  }
+
+  // Bulk operations
+  async bulkSearchMovies(titles: string[]): Promise<BulkSearchResponse> {
+    const response = await this.api.post<BulkSearchResponse>('/search/bulk-movies', { titles });
     return response.data;
   }
 

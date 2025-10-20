@@ -1,112 +1,179 @@
 import React, { useState, useEffect } from 'react';
-import { Media, CreateMediaDto, TMDbMovie, Series } from '../types';
+import { PhysicalItem, TMDbMovie } from '../types';
 import { apiService } from '../services/api.service';
 import SearchModal from './SearchModal';
-import CollectionImportModal from './CollectionImportModal';
+import FormatSelector from './FormatSelector';
 
 interface MediaFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  editMedia?: Media | null;
+  editItem?: PhysicalItem | null;
 }
 
-interface SeriesAssociation {
-  series_id: number;
-  auto_sort: boolean;
-  sort_order?: number;
+interface MovieWithFormats {
+  movie: TMDbMovie;
+  formats: string[];
+  details: any;
 }
 
-const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editMedia }) => {
+const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editItem }) => {
   const [showSearch, setShowSearch] = useState(false);
-  const [showCollectionImport, setShowCollectionImport] = useState(false);
+  const [showFormatSelector, setShowFormatSelector] = useState(false);
+  const [pendingMovie, setPendingMovie] = useState<TMDbMovie | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [availableSeries, setAvailableSeries] = useState<Series[]>([]);
-  const [seriesAssociations, setSeriesAssociations] = useState<SeriesAssociation[]>([]);
-  const [formData, setFormData] = useState<CreateMediaDto>({
-    title: '',
-    tmdb_id: undefined,
-    synopsis: '',
-    cover_art_url: '',
-    release_date: '',
-    director: '',
-    cast: [],
-    physical_format: [],
+  const [selectedMovies, setSelectedMovies] = useState<MovieWithFormats[]>([]);
+  const [movieDetails, setMovieDetails] = useState<Map<number, any>>(new Map());
+  const [formData, setFormData] = useState({
+    // Physical item fields
+    name: '',
     edition_notes: '',
-    region_code: '',
     custom_image_url: '',
+    purchase_date: '',
   });
 
-  // Load available series
   useEffect(() => {
-    if (isOpen) {
-      apiService.getSeries().then(setAvailableSeries).catch(console.error);
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (editMedia) {
+    if (editItem) {
+      // Editing an existing physical item
       setFormData({
-        title: editMedia.title,
-        tmdb_id: editMedia.tmdb_id,
-        synopsis: editMedia.synopsis || '',
-        cover_art_url: editMedia.cover_art_url || '',
-        release_date: editMedia.release_date || '',
-        director: editMedia.director || '',
-        cast: editMedia.cast || [],
-        physical_format: editMedia.physical_format,
-        edition_notes: editMedia.edition_notes || '',
-        region_code: editMedia.region_code || '',
-        custom_image_url: editMedia.custom_image_url || '',
+        // Physical item fields
+        name: editItem.name,
+        edition_notes: editItem.edition_notes || '',
+        custom_image_url: editItem.custom_image_url || '',
+        purchase_date: editItem.purchase_date || '',
       });
-      // Load existing series associations
-      if (editMedia.series && editMedia.series.length > 0) {
-        const associations = editMedia.series.map(s => ({
-          series_id: s.id,
-          auto_sort: true,
-          sort_order: undefined,
-        }));
-        setSeriesAssociations(associations);
-      } else {
-        setSeriesAssociations([]);
-      }
+      
+      // Convert existing media to MovieWithFormats format for display
+      const moviesWithFormats: MovieWithFormats[] = editItem.media.map(m => ({
+        movie: {
+          id: m.tmdb_id || m.id,
+          title: m.title,
+          overview: m.synopsis || '',
+          poster_path: null, // We'll use cover_art_url directly
+          release_date: m.release_date || '',
+          vote_average: 0,
+          vote_count: 0,
+        },
+        formats: m.formats || ['Blu-ray'],
+        details: {
+          title: m.title,
+          id: m.tmdb_id || m.id,
+          poster_url: m.cover_art_url,
+          cover_art_url: m.cover_art_url,
+          overview: m.synopsis,
+          synopsis: m.synopsis,
+          release_date: m.release_date,
+          director: m.director,
+          cast: m.cast,
+        }
+      }));
+      setSelectedMovies(moviesWithFormats);
+      
+      // Store full details for each movie
+      const details = new Map();
+      editItem.media.forEach(m => {
+        details.set(m.tmdb_id || m.id, {
+          title: m.title,
+          id: m.tmdb_id || m.id,
+          poster_url: m.cover_art_url,
+          cover_art_url: m.cover_art_url,
+          overview: m.synopsis,
+          synopsis: m.synopsis,
+          release_date: m.release_date,
+          director: m.director,
+          cast: m.cast,
+        });
+      });
+      setMovieDetails(details);
     } else {
       // Reset form when not editing
       setFormData({
-        title: '',
-        tmdb_id: undefined,
-        synopsis: '',
-        cover_art_url: '',
-        release_date: '',
-        director: '',
-        cast: [],
-        physical_format: [],
+        name: '',
         edition_notes: '',
-        region_code: '',
         custom_image_url: '',
+        purchase_date: '',
       });
-      setSeriesAssociations([]);
+      setSelectedMovies([]);
+      setMovieDetails(new Map());
     }
-  }, [editMedia, isOpen]);
+  }, [editItem, isOpen]);
 
-  const handleTMDbSelect = async (movie: TMDbMovie) => {
+  const handleMovieSelected = async (movie: TMDbMovie) => {
     setShowSearch(false);
+    setPendingMovie(movie);
+    setShowFormatSelector(true);
+  };
+
+  const handleFormatsSelected = async (formats: string[]) => {
+    if (!pendingMovie) return;
+    
+    setShowFormatSelector(false);
     
     try {
-      const details = await apiService.getMovieDetails(movie.id);
-      setFormData({
-        ...formData,
-        title: details.title,
-        tmdb_id: details.id,
-        synopsis: details.overview,
-        cover_art_url: details.poster_url || '',
-        release_date: details.release_date,
-        director: details.director || '',
-        cast: details.cast || [],
-      });
+      // Fetch details for the movie if not already cached
+      let details = movieDetails.get(pendingMovie.id);
+      if (!details) {
+        details = await apiService.getMovieDetails(pendingMovie.id);
+        setMovieDetails(prev => new Map(prev).set(pendingMovie.id, details));
+      }
+      
+      // Add movie with formats to selection
+      const newMovieWithFormats: MovieWithFormats = {
+        movie: pendingMovie,
+        formats,
+        details
+      };
+      
+      setSelectedMovies(prev => [...prev, newMovieWithFormats]);
+      
+      // Auto-generate name if not manually set
+      const allMovies = [...selectedMovies, newMovieWithFormats];
+      const oldAutoName = updatePhysicalItemName(selectedMovies); // Compare to OLD
+      const newAutoName = updatePhysicalItemName(allMovies);
+
+      if (!formData.name || formData.name === oldAutoName) {
+        setFormData({
+          ...formData,
+          name: newAutoName,
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch movie details:', error);
+    } finally {
+      setPendingMovie(null);
+    }
+  };
+
+  const handleRemoveMovie = (movieId: number) => {
+    const newMovies = selectedMovies.filter(m => m.movie.id !== movieId);
+    const oldAutoName = updatePhysicalItemName(selectedMovies); // Compare to OLD
+    const newAutoName = updatePhysicalItemName(newMovies);
+    
+    setSelectedMovies(newMovies);
+    
+    // Update name if it was auto-generated
+    if (!formData.name || formData.name === oldAutoName) {
+      setFormData({
+        ...formData,
+        name: newAutoName,
+      });
+    }
+  };
+
+  // Auto-update physical item name when movies change
+  const updatePhysicalItemName = (movies: MovieWithFormats[]) => {
+    if (movies.length === 0) return '';
+    
+    // Create name from movie titles
+    const titles = movies.map(m => m.movie.title).join(' / ');
+    
+    if (movies.length === 1 && movies[0].formats.length === 1) {
+      // Single movie with single format
+      return `${titles} [${movies[0].formats[0]}]`;
+    } else {
+      // Multiple movies or multiple formats
+      return `${titles} [Multi-format]`;
     }
   };
 
@@ -126,76 +193,58 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
     }
   };
 
-  const handleCollectionImport = async (collectionId: number, collectionName: string, sortName: string) => {
-    try {
-      const newSeries = await apiService.createSeries({
-        name: collectionName,
-        sort_name: sortName,
-        tmdb_collection_id: collectionId,
-      });
-      setAvailableSeries([...availableSeries, newSeries]);
-      setSeriesAssociations([...seriesAssociations, {
-        series_id: newSeries.id,
-        auto_sort: true,
-      }]);
-      setShowCollectionImport(false);
-    } catch (error) {
-      console.error('Failed to import collection:', error);
-      alert('Failed to import collection. Please try again.');
-    }
-  };
-
-  const handleSeriesToggle = (seriesId: number) => {
-    const exists = seriesAssociations.find(a => a.series_id === seriesId);
-    if (exists) {
-      setSeriesAssociations(seriesAssociations.filter(a => a.series_id !== seriesId));
-    } else {
-      setSeriesAssociations([...seriesAssociations, {
-        series_id: seriesId,
-        auto_sort: true,
-      }]);
-    }
-  };
-
-  const handleSeriesAutoSortToggle = (seriesId: number) => {
-    setSeriesAssociations(seriesAssociations.map(a =>
-      a.series_id === seriesId ? { ...a, auto_sort: !a.auto_sort, sort_order: a.auto_sort ? 1 : undefined } : a
-    ));
-  };
-
-  const handleSeriesSortOrderChange = (seriesId: number, sortOrder: number) => {
-    setSeriesAssociations(seriesAssociations.map(a =>
-      a.series_id === seriesId ? { ...a, sort_order: sortOrder } : a
-    ));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate at least one format is selected
-    if (formData.physical_format.length === 0) {
-      alert('Please select at least one physical format.');
+    // Validate at least one movie is selected
+    if (selectedMovies.length === 0) {
+      alert('Please select at least one movie from TMDB.');
       return;
     }
     
     setIsSubmitting(true);
 
     try {
-      const dataToSubmit = {
-        ...formData,
-        series_associations: seriesAssociations,
-      };
+      // Auto-generate name if not manually set
+      const finalName = formData.name || updatePhysicalItemName(selectedMovies);
 
-      if (editMedia) {
-        await apiService.updateMedia(editMedia.id, dataToSubmit);
+      if (editItem) {
+        // Update existing physical item (physical fields only)
+        await apiService.updatePhysicalItem(editItem.id, {
+          name: finalName,
+          edition_notes: formData.edition_notes,
+          custom_image_url: formData.custom_image_url,
+          purchase_date: formData.purchase_date,
+        });
       } else {
-        await apiService.createMedia(dataToSubmit);
+        // Create new physical item with linked media
+        const mediaArray = selectedMovies.map(movieWithFormats => {
+          const { movie, formats, details } = movieWithFormats;
+          return {
+            title: details?.title || movie.title,
+            tmdb_id: details?.id || movie.id,
+            synopsis: details?.overview || details?.synopsis || movie.overview,
+            cover_art_url: details?.poster_url || details?.cover_art_url || '',
+            release_date: details?.release_date || movie.release_date,
+            director: details?.director || '',
+            cast: details?.cast || [],
+            formats: formats,
+          };
+        });
+
+        await apiService.createPhysicalItem({
+          name: finalName,
+          edition_notes: formData.edition_notes,
+          custom_image_url: formData.custom_image_url,
+          purchase_date: formData.purchase_date,
+          media: mediaArray,
+        });
       }
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Failed to save media:', error);
-      alert('Failed to save media. Please try again.');
+      console.error('Failed to save physical item:', error);
+      alert('Failed to save physical item. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -203,7 +252,9 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
 
   if (!isOpen) return null;
 
-  const imageUrl = formData.custom_image_url || formData.cover_art_url;
+  // Get image URL - prioritize custom, then first selected movie's poster
+  const imageUrl = formData.custom_image_url || 
+    (selectedMovies.length > 0 ? selectedMovies[0].details?.poster_url : null);
 
   return (
     <>
@@ -218,7 +269,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {editMedia ? 'Edit Media' : 'Add New Media'}
+                  {editItem ? 'Edit Physical Item' : 'Add New Media'}
                 </h2>
                 <button onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,7 +286,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                 <div>
                   <div className="aspect-[2/3] bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden mb-4">
                     {imageUrl ? (
-                      <img src={imageUrl} alt={formData.title} className="w-full h-full object-cover" />
+                      <img src={imageUrl} alt={formData.name || "Physical item cover"} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <svg className="w-20 h-20 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,13 +296,13 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                     )}
                   </div>
 
-                  {!editMedia && (
+                  {!editItem && (
                     <button
                       type="button"
                       onClick={() => setShowSearch(true)}
                       className="btn-primary w-full mb-4"
                     >
-                      Search TMDb
+                      Choose a Movie
                     </button>
                   )}
 
@@ -272,61 +323,87 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
 
                 {/* Right Column - Form Fields */}
                 <div className="space-y-4">
-                  {/* Title */}
+                  {/* Selected Movies */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Selected Movies *
+                    </label>
+                    
+                    {selectedMovies.length > 0 ? (
+                      <div className="space-y-2 mb-3">
+                        {selectedMovies.map((movieWithFormats) => (
+                          <div
+                            key={movieWithFormats.movie.id}
+                            className="p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                  {movieWithFormats.movie.title}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                  {movieWithFormats.movie.release_date ? new Date(movieWithFormats.movie.release_date).getFullYear() : 'N/A'}
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {movieWithFormats.formats.map((format) => (
+                                    <span
+                                      key={format}
+                                      className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200"
+                                    >
+                                      {format}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              {!editItem && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMovie(movieWithFormats.movie.id)}
+                                  className="ml-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                        No movies selected. Click "Choose a Movie" to add movies.
+                      </p>
+                    )}
+                  </div>
+
+
+                  {/* Physical Item Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Title *
+                      Item Name
                     </label>
                     <input
                       type="text"
-                      required
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      value={formData.name || updatePhysicalItemName(selectedMovies)}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder={updatePhysicalItemName(selectedMovies)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      Auto-generated from movie titles and formats. Customize if needed.
+                    </p>
                   </div>
 
-                  {/* Physical Formats */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Physical Formats * (select all that apply)
-                    </label>
-                    <div className="space-y-2">
-                      {['4K UHD', 'Blu-ray', 'DVD', 'LaserDisc', 'VHS'].map((format) => (
-                        <label key={format} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={formData.physical_format.includes(format)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormData({
-                                  ...formData,
-                                  physical_format: [...formData.physical_format, format],
-                                });
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  physical_format: formData.physical_format.filter((f) => f !== format),
-                                });
-                              }
-                            }}
-                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded mr-2"
-                          />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{format}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Release Date */}
+                  {/* Purchase Date */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Release Date
+                      Purchase Date
                     </label>
                     <input
                       type="date"
-                      value={formData.release_date}
-                      onChange={(e) => setFormData({ ...formData, release_date: e.target.value })}
+                      value={formData.purchase_date}
+                      onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
@@ -338,127 +415,13 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g., Steelbook, Collector's Edition"
+                      placeholder="e.g., Steelbook, Collector's Edition, 3D"
                       value={formData.edition_notes}
                       onChange={(e) => setFormData({ ...formData, edition_notes: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
-
-                  {/* Region Code */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Region Code
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g., Region A, Region 1"
-                      value={formData.region_code}
-                      onChange={(e) => setFormData({ ...formData, region_code: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-
-                  {/* Director */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Director
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.director}
-                      onChange={(e) => setFormData({ ...formData, director: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
-
-                  {/* Synopsis */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Synopsis
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={formData.synopsis}
-                      onChange={(e) => setFormData({ ...formData, synopsis: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
                 </div>
-              </div>
-
-              {/* Series Section */}
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Series</h3>
-                  {formData.tmdb_id && (
-                    <button
-                      type="button"
-                      onClick={() => setShowCollectionImport(true)}
-                      className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
-                    >
-                      + Import from TMDb
-                    </button>
-                  )}
-                </div>
-
-                {availableSeries.length === 0 ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No series available. Create one in the Series management page.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {availableSeries.map(series => {
-                      const association = seriesAssociations.find(a => a.series_id === series.id);
-                      const isSelected = !!association;
-
-                      return (
-                        <div key={series.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              id={`series-${series.id}`}
-                              checked={isSelected}
-                              onChange={() => handleSeriesToggle(series.id)}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
-                            />
-                            <label htmlFor={`series-${series.id}`} className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                              {series.name}
-                            </label>
-                          </div>
-
-                          {isSelected && association && (
-                            <div className="mt-2 ml-6 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  id={`auto-sort-${series.id}`}
-                                  checked={association.auto_sort}
-                                  onChange={() => handleSeriesAutoSortToggle(series.id)}
-                                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
-                                />
-                                <label htmlFor={`auto-sort-${series.id}`} className="text-xs text-gray-600 dark:text-gray-400">
-                                  Auto-sort by release date
-                                </label>
-                              </div>
-
-                              {!association.auto_sort && (
-                                <div>
-                                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Manual Sort Order:</label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={association.sort_order || 1}
-                                    onChange={(e) => handleSeriesSortOrderChange(series.id, parseInt(e.target.value))}
-                                    className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
 
               {/* Actions */}
@@ -467,7 +430,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
                   Cancel
                 </button>
                 <button type="submit" disabled={isSubmitting} className="btn-primary">
-                  {isSubmitting ? 'Saving...' : editMedia ? 'Update' : 'Add Media'}
+                  {isSubmitting ? 'Saving...' : editItem ? 'Update' : 'Add Media'}
                 </button>
               </div>
             </form>
@@ -479,17 +442,19 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editM
       <SearchModal
         isOpen={showSearch}
         onClose={() => setShowSearch(false)}
-        onSelect={handleTMDbSelect}
+        onSelect={handleMovieSelected}
       />
 
-      {/* Collection Import Modal */}
-      {showCollectionImport && formData.tmdb_id && (
-        <CollectionImportModal
-          tmdbId={formData.tmdb_id}
-          onClose={() => setShowCollectionImport(false)}
-          onImport={handleCollectionImport}
-        />
-      )}
+      {/* Format Selector Modal */}
+      <FormatSelector
+        isOpen={showFormatSelector}
+        onClose={() => {
+          setShowFormatSelector(false);
+          setPendingMovie(null);
+        }}
+        onConfirm={handleFormatsSelected}
+        movieTitle={pendingMovie?.title || ''}
+      />
     </>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Media, PhysicalFormat, SortField, SortOrder } from '../types';
+import { PhysicalItem, PhysicalFormat, SortField, SortOrder } from '../types';
 import { apiService } from '../services/api.service';
 import { useAuth } from '../context/AuthContext';
 import MediaGrid from '../components/MediaGrid';
@@ -11,9 +11,9 @@ const SESSION_SORT_ORDER_KEY = 'collection_sort_order';
 
 const CollectionPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
-  const [media, setMedia] = useState<Media[]>([]);
+  const [physicalItems, setPhysicalItems] = useState<PhysicalItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
+  const [selectedItem, setSelectedItem] = useState<PhysicalItem | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [collectionTitle, setCollectionTitle] = useState('Media Collection');
   
@@ -66,13 +66,13 @@ const CollectionPage: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Load media with filters
-      const mediaData = await apiService.getMedia({
+      // Load physical items with filters
+      const items = await apiService.getPhysicalItems({
         format: format !== 'all' ? format : undefined,
         sort_by: sortBy,
         sort_order: sortOrder,
       });
-      setMedia(mediaData);
+      setPhysicalItems(items);
     } catch (error) {
       console.error('Failed to load collection:', error);
     } finally {
@@ -110,11 +110,11 @@ const CollectionPage: React.FC = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{collectionTitle}</h1>
         <p className="text-gray-600 dark:text-gray-300">
-          {media.length} {media.length === 1 ? 'item' : 'items'} in your library
+          {physicalItems.length} {physicalItems.length === 1 ? 'item' : 'items'} in your library
         </p>
       </div>
 
-      {media.length > 0 && (
+      {physicalItems.length > 0 && (
         <FilterBar
           format={format}
           sortBy={sortBy}
@@ -125,7 +125,7 @@ const CollectionPage: React.FC = () => {
       )}
 
       {/* Media Grid or Empty State */}
-      {media.length === 0 ? (
+      {physicalItems.length === 0 ? (
         <div className="card text-center py-16">
           <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,14 +150,14 @@ const CollectionPage: React.FC = () => {
           </a>
         </div>
       ) : (
-        <MediaGrid media={media} onMediaClick={setSelectedMedia} />
+        <MediaGrid physicalItems={physicalItems} onItemClick={setSelectedItem} />
       )}
 
       {/* Detail Modal */}
       <MediaDetailModal
-        media={selectedMedia}
-        isOpen={!!selectedMedia}
-        onClose={() => setSelectedMedia(null)}
+        physicalItem={selectedItem}
+        isOpen={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
       />
     </div>
   );

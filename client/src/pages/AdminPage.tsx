@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Media, SortField, SortOrder } from '../types';
+import { PhysicalItem, SortField, SortOrder } from '../types';
 import { apiService } from '../services/api.service';
 import MediaForm from '../components/MediaForm';
 import SeriesManager from '../components/SeriesManager';
+import BulkAddForm from '../components/BulkAddForm';
 
 type AdminTab = 'media' | 'series' | 'settings';
 
@@ -18,10 +19,11 @@ const AdminPage: React.FC = () => {
 
   // Admin state
   const [activeTab, setActiveTab] = useState<AdminTab>('media');
-  const [media, setMedia] = useState<Media[]>([]);
+  const [physicalItems, setPhysicalItems] = useState<PhysicalItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingMedia, setEditingMedia] = useState<Media | null>(null);
+  const [editingItem, setEditingItem] = useState<PhysicalItem | null>(null);
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [defaultTheme, setDefaultTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [defaultSortBy, setDefaultSortBy] = useState<SortField>('created_at');
@@ -43,11 +45,11 @@ const AdminPage: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [mediaData, settings] = await Promise.all([
-        apiService.getMedia(),
+      const [items, settings] = await Promise.all([
+        apiService.getPhysicalItems(),
         apiService.getSettings(),
       ]);
-      setMedia(mediaData);
+      setPhysicalItems(items);
       setIsPublic(settings.collection_public === 'true');
       setDefaultTheme((settings.default_theme as 'light' | 'dark' | 'system') || 'light');
       setDefaultSortBy((settings.default_sort_by as SortField) || 'created_at');
@@ -79,13 +81,13 @@ const AdminPage: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+    if (!confirm('Are you sure you want to delete this physical item?')) return;
 
     try {
-      await apiService.deleteMedia(id);
+      await apiService.deletePhysicalItem(id);
       await loadData();
     } catch (error) {
-      console.error('Failed to delete media:', error);
+      console.error('Failed to delete physical item:', error);
       alert('Failed to delete item. Please try again.');
     }
   };
@@ -298,12 +300,12 @@ const AdminPage: React.FC = () => {
   }
 
   const stats = {
-    total: media.length,
-    uhd: media.filter((m) => m.physical_format.includes('4K UHD')).length,
-    bluray: media.filter((m) => m.physical_format.includes('Blu-ray')).length,
-    dvd: media.filter((m) => m.physical_format.includes('DVD')).length,
-    laserdisc: media.filter((m) => m.physical_format.includes('LaserDisc')).length,
-    vhs: media.filter((m) => m.physical_format.includes('VHS')).length,
+    total: physicalItems.length,
+    uhd: physicalItems.filter((item) => item.physical_format.includes('4K UHD')).length,
+    bluray: physicalItems.filter((item) => item.physical_format.includes('Blu-ray')).length,
+    dvd: physicalItems.filter((item) => item.physical_format.includes('DVD')).length,
+    laserdisc: physicalItems.filter((item) => item.physical_format.includes('LaserDisc')).length,
+    vhs: physicalItems.filter((item) => item.physical_format.includes('VHS')).length,
   };
 
   return (
@@ -379,7 +381,23 @@ const AdminPage: React.FC = () => {
           <button className="btn-primary w-full">Add Media</button>
         </div>
 
-        <Link to="/collection" className="card hover:shadow-md transition-shadow">
+        <div
+          onClick={() => setShowBulkAdd(true)}
+          className="card hover:shadow-md transition-shadow cursor-pointer"
+        >
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold">Bulk Add Movies</h3>
+          </div>
+          <p className="text-gray-600 mb-4">Import multiple movies at once from a list of titles</p>
+          <button className="btn-primary w-full">Bulk Import</button>
+        </div>
+
+        <Link to="/" className="card hover:shadow-md transition-shadow">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
               <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -426,77 +444,104 @@ const AdminPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Media List */}
+      {/* Bulk Add Form */}
+      {showBulkAdd && (
+        <div className="mb-8">
+          <BulkAddForm onSuccess={loadData} />
+          <div className="mt-4">
+            <button
+              onClick={() => setShowBulkAdd(false)}
+              className="btn-secondary"
+            >
+              Close Bulk Add
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Physical Items List */}
       <div className="card">
-        <h3 className="text-lg font-semibold mb-4">All Media ({media.length})</h3>
-        {media.length === 0 ? (
+        <h3 className="text-lg font-semibold mb-4">All Physical Items ({physicalItems.length})</h3>
+        {physicalItems.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">No media items yet</p>
+            <p className="text-gray-600 mb-4">No physical items yet</p>
             <button onClick={() => setShowAddForm(true)} className="btn-primary">
               Add Your First Item
             </button>
           </div>
         ) : (
           <div className="space-y-2">
-            {media.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700"
-              >
-                <div className="w-12 h-16 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden flex-shrink-0">
-                  {(item.custom_image_url || item.cover_art_url) ? (
-                    <img
-                      src={item.custom_image_url || item.cover_art_url}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h18M3 12h18M3 16h18" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">{item.title}</h4>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 flex-wrap">
-                    {item.physical_format.map((format, idx) => (
-                      <span key={idx} className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                        {format}
-                      </span>
-                    ))}
-                    {item.release_date && (
-                      <span>{new Date(item.release_date).getFullYear()}</span>
+            {physicalItems.map((item) => {
+              const primaryMedia = item.media[0];
+              const imageUrl = item.custom_image_url || primaryMedia?.cover_art_url;
+              
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <div className="w-12 h-16 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden flex-shrink-0">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h18M3 12h18M3 16h18" />
+                        </svg>
+                      </div>
                     )}
-                    {item.edition_notes && <span className="italic">• {item.edition_notes}</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                      {primaryMedia?.title || item.name}
+                    </h4>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 flex-wrap">
+                      {item.physical_format.map((format, idx) => (
+                        <span key={idx} className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                          {format}
+                        </span>
+                      ))}
+                      {primaryMedia?.release_date && (
+                        <span>{new Date(primaryMedia.release_date).getFullYear()}</span>
+                      )}
+                      {item.media.length > 1 && (
+                        <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
+                          {item.media.length} movies
+                        </span>
+                      )}
+                      {item.edition_notes && <span className="italic">• {item.edition_notes}</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingItem(item);
+                        setShowAddForm(true);
+                      }}
+                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                      title="Edit"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                      title="Delete"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingMedia(item);
-                      setShowAddForm(true);
-                    }}
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                    title="Edit"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                    title="Delete"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -506,13 +551,13 @@ const AdminPage: React.FC = () => {
           isOpen={showAddForm}
           onClose={() => {
             setShowAddForm(false);
-            setEditingMedia(null);
+            setEditingItem(null);
           }}
           onSuccess={() => {
             loadData();
-            setEditingMedia(null);
+            setEditingItem(null);
           }}
-          editMedia={editingMedia}
+          editItem={editingItem}
         />
       </>
       )}
@@ -695,7 +740,7 @@ const AdminPage: React.FC = () => {
                 </p>
                 <button
                   onClick={handleExport}
-                  disabled={isExporting || media.length === 0}
+                  disabled={isExporting || physicalItems.length === 0}
                   className="btn-primary"
                 >
                   {isExporting ? 'Exporting...' : `Export ${stats.total} Items to CSV`}

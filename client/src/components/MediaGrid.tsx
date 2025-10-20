@@ -1,14 +1,14 @@
 import React from 'react';
-import { Media } from '../types';
+import { PhysicalItem } from '../types';
 import MediaCard from './MediaCard';
 
 interface MediaGridProps {
-  media: Media[];
-  onMediaClick: (media: Media) => void;
+  physicalItems: PhysicalItem[];
+  onItemClick: (item: PhysicalItem) => void;
 }
 
-const MediaGrid: React.FC<MediaGridProps> = ({ media, onMediaClick }) => {
-  if (media.length === 0) {
+const MediaGrid: React.FC<MediaGridProps> = ({ physicalItems, onItemClick }) => {
+  if (physicalItems.length === 0) {
     return (
       <div className="card text-center py-16">
         <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mx-auto mb-6">
@@ -23,7 +23,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({ media, onMediaClick }) => {
             <path d="M17 16.5h4"/>
           </svg>
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">No Media Found</h3>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">No Items Found</h3>
         <p className="text-gray-600 dark:text-gray-300">
           Try adjusting your filters or add new items to your collection
         </p>
@@ -33,8 +33,8 @@ const MediaGrid: React.FC<MediaGridProps> = ({ media, onMediaClick }) => {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-      {media.map((item) => (
-        <MediaCard key={item.id} media={item} onClick={() => onMediaClick(item)} />
+      {physicalItems.map((item) => (
+        <MediaCard key={item.id} physicalItem={item} onClick={() => onItemClick(item)} />
       ))}
     </div>
   );

@@ -17,7 +17,7 @@ export interface MovieSeries {
   series?: Series;
 }
 
-// Media types
+// Media types (pure movie metadata, no physical ownership info)
 export interface Media {
   id: number;
   title: string;
@@ -27,13 +27,11 @@ export interface Media {
   release_date?: string;
   director?: string;
   cast?: string[];
-  physical_format: string[];
-  edition_notes?: string;
-  region_code?: string;
-  custom_image_url?: string;
   series?: Series[];
   created_at?: string;
   updated_at?: string;
+  disc_number?: number; // For junction table data
+  formats?: string[]; // For junction table data - per-movie formats
 }
 
 export interface CreateMediaDto {
@@ -44,13 +42,54 @@ export interface CreateMediaDto {
   release_date?: string;
   director?: string;
   cast?: string[];
-  physical_format: string[];
-  edition_notes?: string;
-  region_code?: string;
-  custom_image_url?: string;
 }
 
 export type UpdateMediaDto = Partial<CreateMediaDto>;
+
+// Physical Item types (what you actually own)
+export interface PhysicalItem {
+  id: number;
+  name: string;
+  physical_format: string[];
+  edition_notes?: string;
+  custom_image_url?: string;
+  purchase_date?: string;
+  created_at?: string;
+  updated_at?: string;
+  media: Media[]; // Linked media entries
+}
+
+export interface CreatePhysicalItemDto {
+  name: string;
+  edition_notes?: string;
+  custom_image_url?: string;
+  purchase_date?: string;
+  media: {
+    id?: number; // If linking to existing media
+    title?: string; // If creating new media
+    tmdb_id?: number;
+    synopsis?: string;
+    cover_art_url?: string;
+    release_date?: string;
+    director?: string;
+    cast?: string[];
+    disc_number?: number;
+    formats?: string[]; // Per-movie formats
+  }[] | {
+    id?: number;
+    title?: string;
+    tmdb_id?: number;
+    synopsis?: string;
+    cover_art_url?: string;
+    release_date?: string;
+    director?: string;
+    cast?: string[];
+    disc_number?: number;
+    formats?: string[];
+  };
+}
+
+export type UpdatePhysicalItemDto = Partial<Omit<CreatePhysicalItemDto, 'media'>>;
 
 // TMDb types
 export interface TMDbMovie {
@@ -104,8 +143,64 @@ export type SortField = 'title' | 'release_date' | 'created_at' | 'physical_form
 export type SortOrder = 'asc' | 'desc';
 
 export interface FilterOptions {
-  format: PhysicalFormat;
-  sort_by: SortField;
-  sort_order: SortOrder;
+  format?: PhysicalFormat;
+  sort_by?: SortField;
+  sort_order?: SortOrder;
+}
+
+// Bulk operations types
+export interface BulkSearchMatch {
+  originalTitle: string;
+  matches: TMDbMovieDetails[];
+  selectedMatch: TMDbMovieDetails | null;
+}
+
+export interface BulkSearchUnmatched {
+  originalTitle: string;
+  error: string;
+}
+
+export interface BulkSearchResponse {
+  matched: BulkSearchMatch[];
+  unmatched: BulkSearchUnmatched[];
+  summary: {
+    total: number;
+    matched: number;
+    unmatched: number;
+  };
+}
+
+export interface BulkPhysicalItemDto {
+  name: string;
+  physical_format: string[];
+  edition_notes?: string;
+  custom_image_url?: string;
+  purchase_date?: string;
+  media: {
+    title: string;
+    tmdb_id?: number;
+    synopsis?: string;
+    cover_art_url?: string;
+    release_date?: string;
+    director?: string;
+    cast?: string[];
+  };
+}
+
+export interface BulkCreatePhysicalItemsResponse {
+  successful: Array<{
+    success: true;
+    physicalItem: PhysicalItem;
+    originalName: string;
+  }>;
+  failed: Array<{
+    originalName: string;
+    error: string;
+  }>;
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
 }
 

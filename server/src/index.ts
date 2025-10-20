@@ -7,6 +7,7 @@ import { setupDatabase } from './database';
 // Import routes
 import authRoutes from './routes/auth.routes';
 import mediaRoutes from './routes/media.routes';
+import physicalItemsRoutes from './routes/physical-items.routes';
 import settingsRoutes from './routes/settings.routes';
 import searchRoutes from './routes/search.routes';
 import seriesRoutes from './routes/series.routes';
@@ -45,6 +46,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/physical-items', physicalItemsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/series', seriesRoutes);

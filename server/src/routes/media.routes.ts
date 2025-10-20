@@ -316,6 +316,115 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/media/bulk
+ * Create multiple media items (protected)
+ */
+router.post('/bulk', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { mediaItems } = req.body;
+
+    if (!mediaItems || !Array.isArray(mediaItems)) {
+      return res.status(400).json({ error: 'mediaItems must be an array' });
+    }
+
+    if (mediaItems.length === 0) {
+      return res.status(400).json({ error: 'At least one media item is required' });
+    }
+
+    if (mediaItems.length > 50) {
+      return res.status(400).json({ error: 'Maximum 50 media items allowed per request' });
+    }
+
+    const results = await Promise.allSettled(
+      mediaItems.map(async (mediaData: any) => {
+        // Validate required fields
+        if (!mediaData.title || !mediaData.physical_format) {
+          throw new Error('Title and physical_format are required');
+        }
+
+        // Validate and convert physical_format to JSON array
+        let formatArray: string[];
+        if (Array.isArray(mediaData.physical_format)) {
+          formatArray = mediaData.physical_format;
+        } else if (typeof mediaData.physical_format === 'string') {
+          formatArray = [mediaData.physical_format];
+        } else {
+          throw new Error('physical_format must be a string or array');
+        }
+
+        // Validate each format
+        const validFormats = ['4K UHD', 'Blu-ray', 'DVD', 'LaserDisc', 'VHS'];
+        for (const format of formatArray) {
+          if (!validFormats.includes(format)) {
+            throw new Error(`Invalid physical format: ${format}. Must be one of: ${validFormats.join(', ')}`);
+          }
+        }
+
+        if (formatArray.length === 0) {
+          throw new Error('At least one physical format is required');
+        }
+
+        const processedMediaData = {
+          ...mediaData,
+          physical_format: JSON.stringify(formatArray)
+        };
+
+        // Convert cast array to JSON string if provided
+        if (processedMediaData.cast && typeof processedMediaData.cast !== 'string') {
+          processedMediaData.cast = JSON.stringify(processedMediaData.cast);
+        }
+
+        const [id] = await db('media').insert(processedMediaData);
+
+        // Get the created media item
+        const createdMedia = await db('media').where('id', id).first();
+        
+        // Parse cast and physical_format back to arrays for response
+        if (createdMedia.cast) {
+          createdMedia.cast = JSON.parse(createdMedia.cast);
+        }
+        if (createdMedia.physical_format) {
+          createdMedia.physical_format = JSON.parse(createdMedia.physical_format);
+        }
+
+        return {
+          success: true,
+          media: createdMedia,
+          originalTitle: mediaData.title
+        };
+      })
+    );
+
+    const successful: any[] = [];
+    const failed: any[] = [];
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        successful.push(result.value);
+      } else {
+        failed.push({
+          originalTitle: mediaItems[index].title,
+          error: result.reason.message
+        });
+      }
+    });
+
+    res.status(201).json({
+      successful,
+      failed,
+      summary: {
+        total: mediaItems.length,
+        successful: successful.length,
+        failed: failed.length
+      }
+    });
+  } catch (error) {
+    console.error('Error creating bulk media:', error);
+    res.status(500).json({ error: 'Failed to create media items' });
+  }
+});
+
+/**
  * DELETE /api/media/:id
  * Delete a media item (protected)
  */
