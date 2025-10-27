@@ -14,10 +14,6 @@ interface MediaItem {
   release_date?: string;
   director?: string;
   cast?: string; // JSON string
-  physical_format: string; // JSON string of array
-  edition_notes?: string;
-  region_code?: string;
-  custom_image_url?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -28,7 +24,7 @@ interface MediaItem {
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { format, sort_by = 'created_at', sort_order = 'desc' } = req.query;
+    const { format, sort_by = 'created_at', sort_order = 'desc', search } = req.query;
 
     // Start with base query
     let query = db('media')
@@ -42,12 +38,25 @@ router.get('/', async (req: Request, res: Response) => {
       )
       .groupBy('media.id');
 
-    // Filter by physical format - check if format is in the JSON array
-    if (format && format !== 'all') {
-      query = query.whereRaw(`EXISTS (
-        SELECT 1 FROM json_each(media.physical_format) 
-        WHERE json_each.value = ?
-      )`, [format]);
+    // Filter by physical format - NOTE: Format filtering is no longer supported
+    // since formats are now stored in physical_item_media.formats, not media.physical_format
+    // if (format && format !== 'all') {
+    //   // Format filtering would require joining with physical_item_media table
+    //   // This is not implemented as media items can have different formats in different physical items
+    // }
+
+    // Search functionality
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const searchTerm = `%${search.trim()}%`;
+      query = query.where(function() {
+        this.where('media.title', 'like', searchTerm)
+          .orWhere('media.director', 'like', searchTerm)
+          .orWhere('media.synopsis', 'like', searchTerm)
+          .orWhereRaw(`EXISTS (
+            SELECT 1 FROM json_each(media.cast) 
+            WHERE json_each.value LIKE ?
+          )`, [searchTerm]);
+      });
     }
 
     // Sorting
@@ -66,14 +75,14 @@ router.get('/', async (req: Request, res: Response) => {
         END ${sortDirection.toUpperCase()} NULLS LAST
       `);
     } else {
-      const validSortColumns = ['title', 'release_date', 'created_at', 'physical_format'];
+      const validSortColumns = ['title', 'release_date', 'created_at'];
       const sortColumn = validSortColumns.includes(sort_by as string) ? `media.${sort_by}` : 'media.created_at';
       query = query.orderBy(sortColumn, sortDirection);
     }
 
     const media = await query;
 
-    // Parse cast, physical_format JSON strings and series data
+    // Parse cast JSON strings and series data
     const mediaWithParsedData = media.map((item) => {
       const series_ids = item.series_ids ? item.series_ids.split(',').map(Number) : [];
       const series_names = item.series_names ? item.series_names.split(',') : [];
@@ -88,7 +97,6 @@ router.get('/', async (req: Request, res: Response) => {
       return {
         ...item,
         cast: item.cast ? JSON.parse(item.cast) : [],
-        physical_format: item.physical_format ? JSON.parse(item.physical_format) : [],
         series,
         // Remove the concatenated fields
         series_ids: undefined,
@@ -117,12 +125,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Media item not found' });
     }
 
-    // Parse cast and physical_format JSON strings
+    // Parse cast JSON string
     if (media.cast) {
       media.cast = JSON.parse(media.cast);
-    }
-    if (media.physical_format) {
-      media.physical_format = JSON.parse(media.physical_format);
     }
 
     res.json(media);
@@ -141,36 +146,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const { series_associations, ...mediaData }: any = req.body;
 
     // Validate required fields
-    if (!mediaData.title || !mediaData.physical_format) {
-      return res.status(400).json({ error: 'Title and physical_format are required' });
+    if (!mediaData.title) {
+      return res.status(400).json({ error: 'Title is required' });
     }
-
-    // Validate and convert physical_format to JSON array
-    let formatArray: string[];
-    if (Array.isArray(mediaData.physical_format)) {
-      formatArray = mediaData.physical_format;
-    } else if (typeof mediaData.physical_format === 'string') {
-      // If single string, convert to array
-      formatArray = [mediaData.physical_format];
-    } else {
-      return res.status(400).json({ error: 'physical_format must be a string or array' });
-    }
-
-    // Validate each format
-    const validFormats = ['4K UHD', 'Blu-ray', 'DVD', 'LaserDisc', 'VHS'];
-    for (const format of formatArray) {
-      if (!validFormats.includes(format)) {
-        return res.status(400).json({ 
-          error: `Invalid physical format: ${format}. Must be one of: ${validFormats.join(', ')}` 
-        });
-      }
-    }
-
-    if (formatArray.length === 0) {
-      return res.status(400).json({ error: 'At least one physical format is required' });
-    }
-
-    mediaData.physical_format = JSON.stringify(formatArray);
 
     // Convert cast array to JSON string if provided
     if (mediaData.cast && typeof mediaData.cast !== 'string') {
@@ -192,12 +170,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     const newMedia = await db('media').where({ id }).first();
 
-    // Parse cast and physical_format back to arrays for response
+    // Parse cast back to array for response
     if (newMedia.cast) {
       newMedia.cast = JSON.parse(newMedia.cast);
-    }
-    if (newMedia.physical_format) {
-      newMedia.physical_format = JSON.parse(newMedia.physical_format);
     }
 
     // Fetch series data
@@ -438,12 +413,158 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Media item not found' });
     }
 
+    // Remove the media from any linked physical items
+    await db('physical_item_media').where({ media_id: id }).delete();
+
+    // Delete the media item
     await db('media').where({ id }).delete();
 
     res.json({ success: true, message: 'Media item deleted successfully' });
   } catch (error) {
     console.error('Error deleting media item:', error);
     res.status(500).json({ error: 'Failed to delete media item' });
+  }
+});
+
+/**
+ * POST /api/media/:id/refresh-tmdb
+ * Refresh media data from TMDB (protected)
+ */
+router.post('/:id/refresh-tmdb', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const mediaId = parseInt(id, 10);
+
+    if (isNaN(mediaId)) {
+      return res.status(400).json({ error: 'Invalid media ID' });
+    }
+
+    // Get current media data
+    const currentMedia = await db('media').where({ id: mediaId }).first();
+    if (!currentMedia) {
+      return res.status(404).json({ error: 'Media item not found' });
+    }
+
+    if (!currentMedia.tmdb_id) {
+      return res.status(400).json({ error: 'Media item has no TMDB ID' });
+    }
+
+    // Import TMDB service
+    const { tmdbService } = await import('../services/tmdb.service');
+
+    // Fetch fresh data from TMDB
+    const tmdbData = await tmdbService.getMovieDetails(currentMedia.tmdb_id);
+    const director = tmdbService.getDirector(tmdbData.credits);
+    const cast = tmdbService.getTopCast(tmdbData.credits, 10);
+    const posterUrl = tmdbService.getImageUrl(tmdbData.poster_path);
+
+    // Format TMDB data to match our schema
+    const tmdbFormatted = {
+      title: tmdbData.title,
+      synopsis: tmdbData.overview,
+      director: director,
+      cast: cast,
+      release_date: tmdbData.release_date,
+      cover_art_url: posterUrl,
+    };
+
+    // Parse current data for comparison
+    const currentFormatted = {
+      title: currentMedia.title,
+      synopsis: currentMedia.synopsis,
+      director: currentMedia.director,
+      cast: currentMedia.cast ? JSON.parse(currentMedia.cast) : [],
+      release_date: currentMedia.release_date,
+      cover_art_url: currentMedia.cover_art_url,
+    };
+
+    res.json({
+      current: currentFormatted,
+      tmdb: tmdbFormatted,
+      tmdb_id: currentMedia.tmdb_id,
+    });
+  } catch (error) {
+    console.error('Error refreshing TMDB data:', error);
+    res.status(500).json({ error: 'Failed to refresh TMDB data' });
+  }
+});
+
+/**
+ * PUT /api/media/:id/update-from-tmdb
+ * Update media with selected TMDB fields (protected)
+ */
+router.put('/:id/update-from-tmdb', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { fields } = req.body; // Array of field names to update from TMDB
+
+    const mediaId = parseInt(id, 10);
+    if (isNaN(mediaId)) {
+      return res.status(400).json({ error: 'Invalid media ID' });
+    }
+
+    // Get current media data
+    const currentMedia = await db('media').where({ id: mediaId }).first();
+    if (!currentMedia) {
+      return res.status(404).json({ error: 'Media item not found' });
+    }
+
+    if (!currentMedia.tmdb_id) {
+      return res.status(400).json({ error: 'Media item has no TMDB ID' });
+    }
+
+    // Import TMDB service
+    const { tmdbService } = await import('../services/tmdb.service');
+
+    // Fetch fresh data from TMDB
+    const tmdbData = await tmdbService.getMovieDetails(currentMedia.tmdb_id);
+    const director = tmdbService.getDirector(tmdbData.credits);
+    const cast = tmdbService.getTopCast(tmdbData.credits, 10);
+    const posterUrl = tmdbService.getImageUrl(tmdbData.poster_path);
+
+    // Prepare update data based on selected fields
+    const updateData: any = {};
+    
+    if (fields.includes('title')) {
+      updateData.title = tmdbData.title;
+    }
+    if (fields.includes('synopsis')) {
+      updateData.synopsis = tmdbData.overview;
+    }
+    if (fields.includes('director')) {
+      updateData.director = director;
+    }
+    if (fields.includes('cast')) {
+      updateData.cast = JSON.stringify(cast);
+    }
+    if (fields.includes('release_date')) {
+      updateData.release_date = tmdbData.release_date;
+    }
+    if (fields.includes('cover_art_url')) {
+      updateData.cover_art_url = posterUrl;
+    }
+
+    // Update the media item
+    await db('media').where({ id: mediaId }).update({
+      ...updateData,
+      updated_at: db.fn.now(),
+    });
+
+    // Fetch updated media
+    const updatedMedia = await db('media').where({ id: mediaId }).first();
+    
+    // Parse cast and physical_format back to arrays for response
+    if (updatedMedia.cast) {
+      updatedMedia.cast = JSON.parse(updatedMedia.cast);
+    }
+    if (updatedMedia.physical_format) {
+      updatedMedia.physical_format = JSON.parse(updatedMedia.physical_format);
+    }
+
+    res.json(updatedMedia);
+  } catch (error) {
+    console.error('Error updating media from TMDB:', error);
+    res.status(500).json({ error: 'Failed to update media from TMDB' });
   }
 });
 

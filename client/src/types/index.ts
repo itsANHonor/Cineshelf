@@ -46,6 +46,20 @@ export interface CreateMediaDto {
 
 export type UpdateMediaDto = Partial<CreateMediaDto>;
 
+// Unified Search types
+export interface UnifiedSearchResult {
+  id: number;
+  title: string;
+  release_date?: string;
+  overview?: string;
+  poster_path?: string | null;
+  cover_art_url?: string | null;
+  director?: string;
+  source: 'database' | 'tmdb';
+  tmdb_id?: number;
+  originalData: Media | TMDbMovie;
+}
+
 // Physical Item types (what you actually own)
 export interface PhysicalItem {
   id: number;
@@ -54,6 +68,7 @@ export interface PhysicalItem {
   edition_notes?: string;
   custom_image_url?: string;
   purchase_date?: string;
+  store_links?: Array<{label: string; url: string}>;
   created_at?: string;
   updated_at?: string;
   media: Media[]; // Linked media entries
@@ -64,6 +79,7 @@ export interface CreatePhysicalItemDto {
   edition_notes?: string;
   custom_image_url?: string;
   purchase_date?: string;
+  store_links?: Array<{label: string; url: string}>;
   media: {
     id?: number; // If linking to existing media
     title?: string; // If creating new media
@@ -146,6 +162,9 @@ export interface FilterOptions {
   format?: PhysicalFormat;
   sort_by?: SortField;
   sort_order?: SortOrder;
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
 // Bulk operations types
@@ -202,5 +221,11 @@ export interface BulkCreatePhysicalItemsResponse {
     successful: number;
     failed: number;
   };
+}
+
+export interface CollectionStatistics {
+  totalPhysicalItems: number;
+  totalMovies: number;
+  formatCounts: Record<string, number>;
 }
 

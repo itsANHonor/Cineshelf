@@ -15,6 +15,7 @@ import {
   BulkSearchResponse,
   BulkPhysicalItemDto,
   BulkCreatePhysicalItemsResponse,
+  CollectionStatistics,
 } from '../types';
 
 class ApiService {
@@ -95,6 +96,16 @@ class ApiService {
     await this.api.delete(`/media/${id}`);
   }
 
+  async refreshMediaFromTMDB(id: number): Promise<{ current: any; tmdb: any; tmdb_id: number }> {
+    const response = await this.api.post(`/media/${id}/refresh-tmdb`);
+    return response.data;
+  }
+
+  async updateMediaFromTMDB(id: number, fields: string[]): Promise<Media> {
+    const response = await this.api.put(`/media/${id}/update-from-tmdb`, { fields });
+    return response.data;
+  }
+
   async uploadImage(file: File): Promise<{ url: string; filename: string }> {
     const formData = new FormData();
     formData.append('image', file);
@@ -135,14 +146,17 @@ class ApiService {
   }
 
   // Physical Items methods
-  async getPhysicalItems(filterOptions?: FilterOptions): Promise<PhysicalItem[]> {
+  async getPhysicalItems(filterOptions?: FilterOptions): Promise<{ items: PhysicalItem[]; pagination: any }> {
     const params: any = {};
     if (filterOptions) {
       if (filterOptions.format) params.format = filterOptions.format;
       if (filterOptions.sort_by) params.sort_by = filterOptions.sort_by;
       if (filterOptions.sort_order) params.sort_order = filterOptions.sort_order;
+      if (filterOptions.search) params.search = filterOptions.search;
+      if (filterOptions.page) params.page = filterOptions.page;
+      if (filterOptions.limit) params.limit = filterOptions.limit;
     }
-    const response = await this.api.get<PhysicalItem[]>('/physical-items', { params });
+    const response = await this.api.get<{ items: PhysicalItem[]; pagination: any }>('/physical-items', { params });
     return response.data;
   }
 
@@ -172,6 +186,11 @@ class ApiService {
 
   async removeMediaLink(physicalItemId: number, mediaId: number): Promise<PhysicalItem> {
     const response = await this.api.delete<PhysicalItem>(`/physical-items/${physicalItemId}/media/${mediaId}`);
+    return response.data;
+  }
+
+  async updateMovieFormats(physicalItemId: number, mediaId: number, formats: string[]): Promise<PhysicalItem> {
+    const response = await this.api.put<PhysicalItem>(`/physical-items/${physicalItemId}/media/${mediaId}/formats`, { formats });
     return response.data;
   }
 
@@ -262,6 +281,12 @@ class ApiService {
       csv_data: csvData,
       mode,
     });
+    return response.data;
+  }
+
+  // Statistics methods
+  async getStatistics(): Promise<CollectionStatistics> {
+    const response = await this.api.get<CollectionStatistics>('/statistics');
     return response.data;
   }
 }

@@ -2,9 +2,38 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/film.svg" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cineshelf</title>
+    <title>Cineshelf - Your Physical Media Collection</title>
+    <script>
+      // Set initial favicon based on system preference
+      (function() {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/png';
+        favicon.sizes = '32x32';
+        favicon.href = isDark ? '/icon-32-dark.png' : '/icon-32.png';
+        document.head.appendChild(favicon);
+        
+        // Add other icon sizes
+        [16, 32, 192, 512].forEach(size => {
+          const link = document.createElement('link');
+          link.rel = 'icon';
+          link.type = 'image/png';
+          link.sizes = size + 'x' + size;
+          link.href = isDark ? `/icon-${size}-dark.png` : `/icon-${size}.png`;
+          document.head.appendChild(link);
+        });
+        
+        // Add Apple touch icon
+        const appleTouchIcon = document.createElement('link');
+        appleTouchIcon.rel = 'apple-touch-icon';
+        appleTouchIcon.sizes = '180x180';
+        appleTouchIcon.href = isDark ? '/apple-touch-icon-dark.png' : '/apple-touch-icon.png';
+        document.head.appendChild(appleTouchIcon);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

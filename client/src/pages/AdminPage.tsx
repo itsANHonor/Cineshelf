@@ -19,7 +19,6 @@ const AdminPage: React.FC = () => {
 
   // Admin state
   const [activeTab, setActiveTab] = useState<AdminTab>('media');
-  const [physicalItems, setPhysicalItems] = useState<PhysicalItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItem, setEditingItem] = useState<PhysicalItem | null>(null);
@@ -45,11 +44,7 @@ const AdminPage: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [items, settings] = await Promise.all([
-        apiService.getPhysicalItems(),
-        apiService.getSettings(),
-      ]);
-      setPhysicalItems(items);
+      const settings = await apiService.getSettings();
       setIsPublic(settings.collection_public === 'true');
       setDefaultTheme((settings.default_theme as 'light' | 'dark' | 'system') || 'light');
       setDefaultSortBy((settings.default_sort_by as SortField) || 'created_at');
@@ -80,17 +75,6 @@ const AdminPage: React.FC = () => {
     setIsLoggingIn(false);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this physical item?')) return;
-
-    try {
-      await apiService.deletePhysicalItem(id);
-      await loadData();
-    } catch (error) {
-      console.error('Failed to delete physical item:', error);
-      alert('Failed to delete item. Please try again.');
-    }
-  };
 
   const handleTogglePublic = async () => {
     setIsSavingSettings(true);
@@ -245,25 +229,29 @@ const AdminPage: React.FC = () => {
         <div className="max-w-md mx-auto">
           <div className="card">
             <div className="text-center mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h1>
-              <p className="text-gray-600">Enter your admin password to continue</p>
+              <div className="flex flex-col items-center mb-4">
+                <img src="/icon-32.png" alt="Cineshelf" className="w-20 h-20 mb-4 dark:hidden" />
+                <img src="/icon-32-dark.png" alt="Cineshelf" className="w-20 h-20 mb-4 hidden dark:block" />
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Admin Login</h1>
+                <p className="text-gray-600 dark:text-gray-300">Enter your admin password to continue</p>
+              </div>
             </div>
 
             <form onSubmit={handleLogin}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Password
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Enter admin password"
                   autoFocus
                 />
                 {loginError && (
-                  <p className="mt-2 text-sm text-red-600">{loginError}</p>
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{loginError}</p>
                 )}
               </div>
 
@@ -299,14 +287,7 @@ const AdminPage: React.FC = () => {
     );
   }
 
-  const stats = {
-    total: physicalItems.length,
-    uhd: physicalItems.filter((item) => item.physical_format.includes('4K UHD')).length,
-    bluray: physicalItems.filter((item) => item.physical_format.includes('Blu-ray')).length,
-    dvd: physicalItems.filter((item) => item.physical_format.includes('DVD')).length,
-    laserdisc: physicalItems.filter((item) => item.physical_format.includes('LaserDisc')).length,
-    vhs: physicalItems.filter((item) => item.physical_format.includes('VHS')).length,
-  };
+  // Note: Stats are now displayed on the main collection page
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -413,36 +394,6 @@ const AdminPage: React.FC = () => {
 
       </div>
 
-      {/* Stats */}
-      <div className="card mb-8">
-        <h3 className="text-lg font-semibold mb-4">Collection Overview</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary-600">{stats.total}</div>
-            <div className="text-sm text-gray-600">Total Items</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.uhd}</div>
-            <div className="text-sm text-gray-600">4K UHD</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.bluray}</div>
-            <div className="text-sm text-gray-600">Blu-ray</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{stats.dvd}</div>
-            <div className="text-sm text-gray-600">DVD</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{stats.laserdisc}</div>
-            <div className="text-sm text-gray-600">LaserDisc</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{stats.vhs}</div>
-            <div className="text-sm text-gray-600">VHS</div>
-          </div>
-        </div>
-      </div>
 
       {/* Bulk Add Form */}
       {showBulkAdd && (
@@ -459,91 +410,44 @@ const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* Physical Items List */}
+      {/* Collection Management Links */}
       <div className="card">
-        <h3 className="text-lg font-semibold mb-4">All Physical Items ({physicalItems.length})</h3>
-        {physicalItems.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">No physical items yet</p>
-            <button onClick={() => setShowAddForm(true)} className="btn-primary">
-              Add Your First Item
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {physicalItems.map((item) => {
-              const primaryMedia = item.media[0];
-              const imageUrl = item.custom_image_url || primaryMedia?.cover_art_url;
-              
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700"
-                >
-                  <div className="w-12 h-16 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden flex-shrink-0">
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h18M3 12h18M3 16h18" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-                      {primaryMedia?.title || item.name}
-                    </h4>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 flex-wrap">
-                      {item.physical_format.map((format, idx) => (
-                        <span key={idx} className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                          {format}
-                        </span>
-                      ))}
-                      {primaryMedia?.release_date && (
-                        <span>{new Date(primaryMedia.release_date).getFullYear()}</span>
-                      )}
-                      {item.media.length > 1 && (
-                        <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
-                          {item.media.length} movies
-                        </span>
-                      )}
-                      {item.edition_notes && <span className="italic">• {item.edition_notes}</span>}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingItem(item);
-                        setShowAddForm(true);
-                      }}
-                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                      title="Edit"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                      title="Delete"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <h3 className="text-lg font-semibold mb-4">Collection Management</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <a
+            href="/"
+            className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-gray-100">View Collection</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Browse and edit your collection with WYSIWYG editor</p>
+              </div>
+            </div>
+          </a>
+          
+          <a
+            href="/movies"
+            className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2h4a1 1 0 110 2h-1v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6H3a1 1 0 110-2h4zM9 6v10a1 1 0 102 0V6a1 1 0 10-2 0zm4 0v10a1 1 0 102 0V6a1 1 0 10-2 0z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-gray-100">Manage Movies</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Edit individual movie metadata and TMDB data</p>
+              </div>
+            </div>
+          </a>
+        </div>
       </div>
 
         {/* Add/Edit Form Modal */}
@@ -740,10 +644,10 @@ const AdminPage: React.FC = () => {
                 </p>
                 <button
                   onClick={handleExport}
-                  disabled={isExporting || physicalItems.length === 0}
+                  disabled={isExporting}
                   className="btn-primary"
                 >
-                  {isExporting ? 'Exporting...' : `Export ${stats.total} Items to CSV`}
+                  {isExporting ? 'Exporting...' : 'Export Collection to CSV'}
                 </button>
               </div>
 
@@ -833,35 +737,6 @@ const AdminPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Collection Stats</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary-600">{stats.total}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total Items</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.uhd}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">4K UHD</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{stats.bluray}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Blu-ray</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{stats.dvd}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">DVD</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{stats.laserdisc}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">LaserDisc</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{stats.vhs}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">VHS</div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

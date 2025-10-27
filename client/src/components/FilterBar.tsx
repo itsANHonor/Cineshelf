@@ -6,23 +6,31 @@ interface FilterBarProps {
   format: PhysicalFormat;
   sortBy: SortField;
   sortOrder: SortOrder;
+  searchQuery: string;
   onFormatChange: (format: PhysicalFormat) => void;
   onSortChange: (sortBy: SortField, sortOrder: SortOrder) => void;
+  onSearchChange: (query: string) => void;
+  onClearFilters: () => void;
 }
 
 const FilterBar: React.FC<FilterBarProps> = ({
   format,
   sortBy,
   sortOrder,
+  searchQuery,
   onFormatChange,
   onSortChange,
+  onSearchChange,
+  onClearFilters,
 }) => {
   const handleSortByChange = (newSortBy: SortField) => {
     if (newSortBy === sortBy) {
       // Toggle sort order
       onSortChange(sortBy, sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      onSortChange(newSortBy, 'desc');
+      // Default to ascending for alphabetical sorts, descending for others
+      const defaultOrder = ['title', 'series_sort', 'director_last_name'].includes(newSortBy) ? 'asc' : 'desc';
+      onSortChange(newSortBy, defaultOrder);
     }
   };
 
@@ -30,6 +38,42 @@ const FilterBar: React.FC<FilterBarProps> = ({
     <div className="card mb-6">
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-1">
+          {/* Search */}
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search collection..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-100"
+              />
+              <svg
+                className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              {searchQuery && (
+                <button
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Format Filter */}
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Format:</label>
@@ -105,8 +149,16 @@ const FilterBar: React.FC<FilterBarProps> = ({
           </div>
         </div>
 
-        {/* Theme Toggle */}
-        <div className="flex items-center">
+        {/* Clear Filters & Theme Toggle */}
+        <div className="flex items-center gap-4">
+          {(searchQuery || format !== 'all') && (
+            <button
+              onClick={onClearFilters}
+              className="text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+            >
+              Clear Filters
+            </button>
+          )}
           <ThemeToggle />
         </div>
       </div>

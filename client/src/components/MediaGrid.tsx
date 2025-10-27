@@ -5,9 +5,20 @@ import MediaCard from './MediaCard';
 interface MediaGridProps {
   physicalItems: PhysicalItem[];
   onItemClick: (item: PhysicalItem) => void;
+  isEditMode?: boolean;
+  isAuthenticated?: boolean;
+  onEditItem?: (item: PhysicalItem) => void;
+  onDeleteItem?: (itemId: number) => void;
 }
 
-const MediaGrid: React.FC<MediaGridProps> = ({ physicalItems, onItemClick }) => {
+const MediaGrid: React.FC<MediaGridProps> = ({ 
+  physicalItems, 
+  onItemClick, 
+  isEditMode = false, 
+  isAuthenticated = false,
+  onEditItem,
+  onDeleteItem
+}) => {
   if (physicalItems.length === 0) {
     return (
       <div className="card text-center py-16">
@@ -34,7 +45,15 @@ const MediaGrid: React.FC<MediaGridProps> = ({ physicalItems, onItemClick }) => 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       {physicalItems.map((item) => (
-        <MediaCard key={item.id} physicalItem={item} onClick={() => onItemClick(item)} />
+        <MediaCard 
+          key={item.id} 
+          physicalItem={item} 
+          onClick={() => onItemClick(item)}
+          isEditMode={isEditMode}
+          isAuthenticated={isAuthenticated}
+          onEdit={onEditItem}
+          onDelete={onDeleteItem}
+        />
       ))}
     </div>
   );

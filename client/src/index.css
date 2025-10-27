@@ -26,4 +26,13 @@
   .card {
     @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200;
   }
+  
+  /* Sidebar layout classes */
+  .sidebar-expanded {
+    @apply lg:pl-64;
+  }
+  
+  .sidebar-collapsed {
+    @apply lg:pl-16;
+  }
 }

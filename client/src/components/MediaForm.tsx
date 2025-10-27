@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { PhysicalItem, TMDbMovie } from '../types';
+import { PhysicalItem, TMDbMovie, Media, UnifiedSearchResult } from '../types';
 import { apiService } from '../services/api.service';
-import SearchModal from './SearchModal';
+import UnifiedSearchModal from './UnifiedSearchModal';
+import StoreLinkManager from './StoreLinkManager';
+import MediaEditModal from './MediaEditModal';
 import FormatSelector from './FormatSelector';
 
 interface MediaFormProps {
@@ -15,16 +17,21 @@ interface MovieWithFormats {
   movie: TMDbMovie;
   formats: string[];
   details: any;
+  mediaDbId?: number; // Track the actual database ID
 }
 
 const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editItem }) => {
-  const [showSearch, setShowSearch] = useState(false);
-  const [showFormatSelector, setShowFormatSelector] = useState(false);
-  const [pendingMovie, setPendingMovie] = useState<TMDbMovie | null>(null);
+  const [showUnifiedSearch, setShowUnifiedSearch] = useState(false);
+  const [showMediaEditModal, setShowMediaEditModal] = useState(false);
+  const [editingMedia, setEditingMedia] = useState<Media | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedMovies, setSelectedMovies] = useState<MovieWithFormats[]>([]);
   const [movieDetails, setMovieDetails] = useState<Map<number, any>>(new Map());
+  const [storeLinks, setStoreLinks] = useState<Array<{label: string; url: string}>>([]);
+  const [showFormatSelector, setShowFormatSelector] = useState(false);
+  const [editingFormatsFor, setEditingFormatsFor] = useState<number | null>(null);
+  const [originalFormats, setOriginalFormats] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     // Physical item fields
     name: '',
@@ -56,6 +63,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
           vote_count: 0,
         },
         formats: m.formats || ['Blu-ray'],
+        mediaDbId: m.id, // Preserve the actual media database ID
         details: {
           title: m.title,
           id: m.tmdb_id || m.id,
@@ -69,6 +77,9 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
         }
       }));
       setSelectedMovies(moviesWithFormats);
+      
+      // Load store links
+      setStoreLinks(editItem.store_links || []);
       
       // Store full details for each movie
       const details = new Map();
@@ -96,52 +107,88 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
       });
       setSelectedMovies([]);
       setMovieDetails(new Map());
+      setStoreLinks([]);
     }
   }, [editItem, isOpen]);
 
-  const handleMovieSelected = async (movie: TMDbMovie) => {
-    setShowSearch(false);
-    setPendingMovie(movie);
-    setShowFormatSelector(true);
-  };
-
-  const handleFormatsSelected = async (formats: string[]) => {
-    if (!pendingMovie) return;
-    
-    setShowFormatSelector(false);
-    
+  const handleUnifiedSearchSelect = async (result: UnifiedSearchResult, formats: string[]) => {
     try {
-      // Fetch details for the movie if not already cached
-      let details = movieDetails.get(pendingMovie.id);
-      if (!details) {
-        details = await apiService.getMovieDetails(pendingMovie.id);
-        setMovieDetails(prev => new Map(prev).set(pendingMovie.id, details));
-      }
-      
-      // Add movie with formats to selection
-      const newMovieWithFormats: MovieWithFormats = {
-        movie: pendingMovie,
-        formats,
-        details
-      };
-      
-      setSelectedMovies(prev => [...prev, newMovieWithFormats]);
-      
-      // Auto-generate name if not manually set
-      const allMovies = [...selectedMovies, newMovieWithFormats];
-      const oldAutoName = updatePhysicalItemName(selectedMovies); // Compare to OLD
-      const newAutoName = updatePhysicalItemName(allMovies);
+      if (result.source === 'database') {
+        // Handle existing database movie
+        const existingMedia = result.originalData as Media;
+        
+        // Add existing movie with formats to selection
+        const newMovieWithFormats: MovieWithFormats = {
+          movie: {
+            id: existingMedia.tmdb_id || existingMedia.id,
+            title: existingMedia.title,
+            overview: existingMedia.synopsis || '',
+            poster_path: null,
+            release_date: existingMedia.release_date || '',
+            vote_average: 0,
+            vote_count: 0,
+          },
+          formats,
+          details: {
+            title: existingMedia.title,
+            id: existingMedia.tmdb_id || existingMedia.id,
+            poster_url: existingMedia.cover_art_url,
+            cover_art_url: existingMedia.cover_art_url,
+            overview: existingMedia.synopsis,
+            synopsis: existingMedia.synopsis,
+            release_date: existingMedia.release_date,
+            director: existingMedia.director,
+            cast: existingMedia.cast,
+          }
+        };
+        
+        setSelectedMovies(prev => [...prev, newMovieWithFormats]);
+        
+        // Auto-generate name if not manually set
+        const allMovies = [...selectedMovies, newMovieWithFormats];
+        const oldAutoName = updatePhysicalItemName(selectedMovies);
+        const newAutoName = updatePhysicalItemName(allMovies);
 
-      if (!formData.name || formData.name === oldAutoName) {
-        setFormData({
-          ...formData,
-          name: newAutoName,
-        });
+        if (!formData.name || formData.name === oldAutoName) {
+          setFormData({
+            ...formData,
+            name: newAutoName,
+          });
+        }
+      } else {
+        // Handle TMDB movie (existing flow)
+        const tmdbMovie = result.originalData as TMDbMovie;
+        
+        // Fetch details for the movie if not already cached
+        let details = movieDetails.get(tmdbMovie.id);
+        if (!details) {
+          details = await apiService.getMovieDetails(tmdbMovie.id);
+          setMovieDetails(prev => new Map(prev).set(tmdbMovie.id, details));
+        }
+        
+        // Add movie with formats to selection
+        const newMovieWithFormats: MovieWithFormats = {
+          movie: tmdbMovie,
+          formats,
+          details
+        };
+        
+        setSelectedMovies(prev => [...prev, newMovieWithFormats]);
+        
+        // Auto-generate name if not manually set
+        const allMovies = [...selectedMovies, newMovieWithFormats];
+        const oldAutoName = updatePhysicalItemName(selectedMovies);
+        const newAutoName = updatePhysicalItemName(allMovies);
+
+        if (!formData.name || formData.name === oldAutoName) {
+          setFormData({
+            ...formData,
+            name: newAutoName,
+          });
+        }
       }
     } catch (error) {
-      console.error('Failed to fetch movie details:', error);
-    } finally {
-      setPendingMovie(null);
+      console.error('Failed to add movie:', error);
     }
   };
 
@@ -159,6 +206,104 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
         name: newAutoName,
       });
     }
+  };
+
+  const handleRemoveMovieFromPhysicalItem = async (movieWithFormats: MovieWithFormats) => {
+    if (!editItem) {
+      // Creating new item - just remove from local state
+      handleRemoveMovie(movieWithFormats.movie.id);
+      return;
+    }
+    
+    // Editing existing item - call API
+    const confirmed = confirm(
+      `Remove "${movieWithFormats.movie.title}" from this physical item?\n\n` +
+      `The movie will remain in your database but won't be linked to this item.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      await apiService.removeMediaLink(editItem.id, movieWithFormats.mediaDbId!);
+      setSelectedMovies(prev => prev.filter(m => m.mediaDbId !== movieWithFormats.mediaDbId));
+      // Show success message
+    } catch (error) {
+      alert('Failed to remove movie. Please try again.');
+    }
+  };
+
+  const handleEditMovie = (movieWithFormats: MovieWithFormats) => {
+    // Convert MovieWithFormats to Media type
+    const media: Media = {
+      id: movieWithFormats.mediaDbId!,
+      title: movieWithFormats.details.title,
+      tmdb_id: movieWithFormats.details.id,
+      synopsis: movieWithFormats.details.synopsis,
+      cover_art_url: movieWithFormats.details.cover_art_url,
+      release_date: movieWithFormats.details.release_date,
+      director: movieWithFormats.details.director,
+      cast: movieWithFormats.details.cast,
+    };
+    setEditingMedia(media);
+    setShowMediaEditModal(true);
+  };
+
+  const handleEditFormats = (movieId: number) => {
+    const movie = selectedMovies.find(m => m.movie.id === movieId);
+    if (movie) {
+      setOriginalFormats([...movie.formats]);
+      setEditingFormatsFor(movieId);
+      setShowFormatSelector(true);
+    }
+  };
+
+  const handleFormatsUpdated = async (formats: string[]) => {
+    if (editingFormatsFor === null || !editItem) return;
+    
+    // Update local state immediately for UI responsiveness
+    setSelectedMovies(prev => 
+      prev.map(movie => 
+        movie.movie.id === editingFormatsFor 
+          ? { ...movie, formats }
+          : movie
+      )
+    );
+    
+    // If editing an existing item, update the backend immediately
+    if (editItem) {
+      try {
+        const movieWithFormats = selectedMovies.find(m => m.movie.id === editingFormatsFor);
+        if (movieWithFormats?.mediaDbId) {
+          await apiService.updateMovieFormats(editItem.id, movieWithFormats.mediaDbId, formats);
+        }
+      } catch (error) {
+        console.error('Failed to update movie formats:', error);
+        alert('Failed to update movie formats. Please try again.');
+        // Revert the local state change on error
+        setSelectedMovies(prev => 
+          prev.map(movie => 
+            movie.movie.id === editingFormatsFor 
+              ? { ...movie, formats: originalFormats }
+              : movie
+          )
+        );
+      }
+    }
+    
+    setShowFormatSelector(false);
+    setEditingFormatsFor(null);
+    setOriginalFormats([]);
+  };
+
+  const handleMediaSaved = (updatedMedia: Media) => {
+    // Update the movie in selectedMovies list
+    setSelectedMovies(prev => prev.map(m => 
+      m.mediaDbId === updatedMedia.id 
+        ? { ...m, details: { ...m.details, ...updatedMedia } }
+        : m
+    ));
+    setShowMediaEditModal(false);
+    setEditingMedia(null);
   };
 
   // Auto-update physical item name when movies change
@@ -215,6 +360,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
           edition_notes: formData.edition_notes,
           custom_image_url: formData.custom_image_url,
           purchase_date: formData.purchase_date,
+          store_links: storeLinks,
         });
       } else {
         // Create new physical item with linked media
@@ -237,6 +383,7 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
           edition_notes: formData.edition_notes,
           custom_image_url: formData.custom_image_url,
           purchase_date: formData.purchase_date,
+          store_links: storeLinks,
           media: mediaArray,
         });
       }
@@ -296,15 +443,15 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
                     )}
                   </div>
 
-                  {!editItem && (
+                  <div className="mb-4">
                     <button
                       type="button"
-                      onClick={() => setShowSearch(true)}
-                      className="btn-primary w-full mb-4"
+                      onClick={() => setShowUnifiedSearch(true)}
+                      className="btn-secondary text-sm w-full"
                     >
-                      Choose a Movie
+                      + Add Movie
                     </button>
-                  )}
+                  </div>
 
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -355,17 +502,46 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
                                   ))}
                                 </div>
                               </div>
-                              {!editItem && (
+                              <div className="flex gap-1">
                                 <button
                                   type="button"
-                                  onClick={() => handleRemoveMovie(movieWithFormats.movie.id)}
-                                  className="ml-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditFormats(movieWithFormats.movie.id);
+                                  }}
+                                  className="text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+                                  title="Edit formats"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditMovie(movieWithFormats);
+                                  }}
+                                  className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                                  title="Edit movie metadata"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMovieFromPhysicalItem(movieWithFormats)}
+                                  className="text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                                  title="Remove movie"
                                 >
                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                   </svg>
                                 </button>
-                              )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -421,6 +597,15 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
+
+                  {/* Store Links */}
+                  <div>
+                    <StoreLinkManager
+                      links={storeLinks}
+                      onChange={setStoreLinks}
+                      disabled={isSubmitting}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -438,11 +623,23 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
         </div>
       </div>
 
-      {/* Search Modal */}
-      <SearchModal
-        isOpen={showSearch}
-        onClose={() => setShowSearch(false)}
-        onSelect={handleMovieSelected}
+      {/* Unified Search Modal */}
+      <UnifiedSearchModal
+        isOpen={showUnifiedSearch}
+        onClose={() => setShowUnifiedSearch(false)}
+        onSelect={handleUnifiedSearchSelect}
+        currentPhysicalItem={editItem}
+      />
+
+      {/* Media Edit Modal */}
+      <MediaEditModal
+        media={editingMedia}
+        isOpen={showMediaEditModal}
+        onClose={() => {
+          setShowMediaEditModal(false);
+          setEditingMedia(null);
+        }}
+        onSave={handleMediaSaved}
       />
 
       {/* Format Selector Modal */}
@@ -450,10 +647,12 @@ const MediaForm: React.FC<MediaFormProps> = ({ isOpen, onClose, onSuccess, editI
         isOpen={showFormatSelector}
         onClose={() => {
           setShowFormatSelector(false);
-          setPendingMovie(null);
+          setEditingFormatsFor(null);
+          setOriginalFormats([]);
         }}
-        onConfirm={handleFormatsSelected}
-        movieTitle={pendingMovie?.title || ''}
+        onConfirm={handleFormatsUpdated}
+        movieTitle={editingFormatsFor ? selectedMovies.find(m => m.movie.id === editingFormatsFor)?.movie.title || '' : ''}
+        initialFormats={editingFormatsFor ? selectedMovies.find(m => m.movie.id === editingFormatsFor)?.formats || [] : []}
       />
     </>
   );

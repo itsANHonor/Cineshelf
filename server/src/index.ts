@@ -12,6 +12,7 @@ import settingsRoutes from './routes/settings.routes';
 import searchRoutes from './routes/search.routes';
 import seriesRoutes from './routes/series.routes';
 import importExportRoutes from './routes/import-export.routes';
+import statisticsRoutes from './routes/statistics.routes';
 
 // Load environment variables
 dotenv.config();
@@ -51,6 +52,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/series', seriesRoutes);
 app.use('/api/import-export', importExportRoutes);
+app.use('/api/statistics', statisticsRoutes);
 
 // Serve static frontend files (React build)
 // This must come AFTER API routes so API routes take precedence

@@ -17,7 +17,11 @@ const AboutPage: React.FC = () => {
               <path d="M17 7.5h4"/>
               <path d="M17 16.5h4"/>
             </svg>
-            <h1 className="text-6xl font-bold text-gray-900 dark:text-gray-100">Cineshelf</h1>
+            <h1 className="text-6xl font-bold text-gray-900 dark:text-gray-100 flex items-center justify-center gap-4">
+              <img src="/icon-32.png" alt="Cineshelf" className="w-16 h-16 dark:hidden" />
+              <img src="/icon-32-dark.png" alt="Cineshelf" className="w-16 h-16 hidden dark:block" />
+              Cineshelf
+            </h1>
           </div>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
             A beautiful, modern way to catalog and showcase your physical media collection
