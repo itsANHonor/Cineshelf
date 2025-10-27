@@ -46,6 +46,11 @@ WORKDIR /app
 # Copy backend build and dependencies
 COPY --from=backend-builder /app/server/dist ./dist
 COPY --from=backend-builder /app/server/package*.json ./
+
+# Install production dependencies
+RUN npm install --only=production && npm cache clean --force
+
+# Copy JavaScript migration files
 COPY --from=backend-builder /app/server/migrations/*.js ./migrations/
 
 # Create a JavaScript knexfile from the TypeScript config
@@ -65,9 +70,6 @@ RUN echo "const path = require('path');" > knexfile.js && \
 
 # Copy frontend build
 COPY --from=frontend-builder /app/client/dist ./public
-
-# Install only production dependencies
-RUN npm install --only=production && npm cache clean --force
 
 # Create non-root user for security
 RUN addgroup -g 1001 nodejs && \

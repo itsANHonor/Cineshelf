@@ -12,7 +12,7 @@ const config = {
     useNullAsDefault: true,
     migrations: {
       directory: './migrations',
-      extension: 'ts'
+      extension: 'js'
     },
     seeds: {
       directory: './seeds'
@@ -27,7 +27,7 @@ const config = {
     useNullAsDefault: true,
     migrations: {
       directory: './migrations',
-      extension: 'ts'
+      extension: 'js'
     }
   }
 };

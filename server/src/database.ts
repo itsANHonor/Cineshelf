@@ -11,7 +11,7 @@ export const db = knex({
   useNullAsDefault: true,
   migrations: {
     directory: path.join(__dirname, '../migrations'),
-    extension: 'ts'
+    extension: 'js'
   }
 });
 
