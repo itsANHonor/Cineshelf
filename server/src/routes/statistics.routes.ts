@@ -8,8 +8,10 @@ router.get('/', async (req: Request, res: Response) => {
     // Get total physical items
     const totalPhysicalItems = await db('physical_items').count('* as count').first();
     
-    // Get total movies (distinct media items)
-    const totalMovies = await db('media').count('* as count').first();
+    // Get total movies (only count movies that are owned - linked to physical items)
+    const totalMovies = await db('physical_item_media')
+      .countDistinct('media_id as count')
+      .first();
     
     // Count movies by format - count each movie's formats
     // Get all physical items with their media counts and formats
