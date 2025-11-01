@@ -33,6 +33,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine if should tag latest
+        id: tag-latest
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "should_tag=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_tag=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
@@ -42,7 +51,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ steps.tag-latest.outputs.should_tag == 'true' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
