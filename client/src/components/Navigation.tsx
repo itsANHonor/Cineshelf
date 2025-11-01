@@ -68,7 +68,7 @@ const Navigation: React.FC = () => {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 h-16">
             {!isCollapsed && (
               <div className="flex items-center gap-2">
                 <img src="/icon-32.png" alt="Cineshelf" className="w-8 h-8 dark:hidden" />
@@ -176,10 +176,10 @@ const Navigation: React.FC = () => {
       </div>
 
       {/* Top Header */}
-      <div className={`fixed top-0 right-0 left-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 transition-all duration-300 ease-in-out ${
+      <div className={`fixed top-0 right-0 left-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-30 transition-all duration-300 ease-in-out h-16 ${
         isCollapsed ? 'lg:left-16' : 'lg:left-64'
       }`}>
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 h-full">
           <div className="flex items-center gap-4">
             {/* Page Title - could be dynamic based on route */}
             <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
