@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { PhysicalItem, PhysicalFormat, SortField, SortOrder, CollectionStatistics as Stats } from '../types';
 import { apiService } from '../services/api.service';
 import { useAuth } from '../context/AuthContext';
+import { useServerMode } from '../context/ServerModeContext';
 import MediaGrid from '../components/MediaGrid';
 import FilterBar from '../components/FilterBar';
 import MediaDetailModal from '../components/MediaDetailModal';
@@ -13,6 +14,10 @@ const SESSION_SORT_ORDER_KEY = 'collection_sort_order';
 
 const CollectionPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { isReadOnly } = useServerMode();
+  
+  // Only allow edit mode when authenticated AND not in read-only mode
+  const canEdit = isAuthenticated && !isReadOnly;
   const [physicalItems, setPhysicalItems] = useState<PhysicalItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -50,7 +55,7 @@ const CollectionPage: React.FC = () => {
         // Load collection title for all users
         setCollectionTitle(settings.collection_title || 'Media Collection');
         
-        if (isAuthenticated) {
+        if (canEdit) {
           // Admin user: use server-side default sort settings
           const adminSortBy = (settings.default_sort_by as SortField) || 'created_at';
           const adminSortOrder = (settings.default_sort_order as SortOrder) || 'desc';
@@ -74,7 +79,7 @@ const CollectionPage: React.FC = () => {
     };
 
     initializeSettings();
-  }, [isAuthenticated]);
+  }, [canEdit]);
 
   // Debounce search query to prevent API calls on every keystroke
   useEffect(() => {
@@ -161,7 +166,7 @@ const CollectionPage: React.FC = () => {
     setSortOrder(newSortOrder);
     
     // Save to session storage for public users
-    if (!isAuthenticated) {
+    if (!canEdit) {
       sessionStorage.setItem(SESSION_SORT_BY_KEY, newSortBy);
       sessionStorage.setItem(SESSION_SORT_ORDER_KEY, newSortOrder);
     }
@@ -175,7 +180,7 @@ const CollectionPage: React.FC = () => {
     setFormat('all');
     setSearchQuery('');
     // Reset to default sort for public users
-    if (!isAuthenticated) {
+    if (!canEdit) {
       setSortBy('title');
       setSortOrder('asc');
     }
@@ -320,9 +325,11 @@ const CollectionPage: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-300 mb-6">
                 Start building your collection by adding your first movie or TV show
               </p>
-              <a href="/admin" className="btn-primary inline-block">
-                Add Your First Item
-              </a>
+              {canEdit && (
+                <a href="/admin" className="btn-primary inline-block">
+                  Add Your First Item
+                </a>
+              )}
             </>
           ) : (
             // Zero results from search/filters
@@ -350,10 +357,10 @@ const CollectionPage: React.FC = () => {
           <MediaGrid 
             physicalItems={physicalItems} 
             onItemClick={setSelectedItem}
-            isEditMode={isAuthenticated}
-            isAuthenticated={isAuthenticated}
-            onEditItem={handleEditItem}
-            onDeleteItem={handleDeleteItem}
+            isEditMode={canEdit}
+            isAuthenticated={canEdit}
+            onEditItem={canEdit ? handleEditItem : undefined}
+            onDeleteItem={canEdit ? handleDeleteItem : undefined}
           />
           
           {/* Loading indicator */}
@@ -376,16 +383,18 @@ const CollectionPage: React.FC = () => {
         onClose={() => setSelectedItem(null)}
       />
 
-      {/* Edit Form Modal */}
-      <MediaForm
-        isOpen={showEditForm}
-        onClose={() => {
-          setShowEditForm(false);
-          setEditingItem(null);
-        }}
-        onSuccess={handleEditSuccess}
-        editItem={editingItem}
-      />
+      {/* Edit Form Modal - only show if can edit */}
+      {canEdit && (
+        <MediaForm
+          isOpen={showEditForm}
+          onClose={() => {
+            setShowEditForm(false);
+            setEditingItem(null);
+          }}
+          onSuccess={handleEditSuccess}
+          editItem={editingItem}
+        />
+      )}
     </div>
   );
 };

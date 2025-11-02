@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
+import { ServerModeProvider, useServerMode } from './context/ServerModeContext';
 import AboutPage from './pages/AboutPage';
 import AdminPage from './pages/AdminPage';
 import CollectionPage from './pages/CollectionPage';
@@ -12,6 +13,19 @@ import DynamicFavicon from './components/DynamicFavicon';
 
 const AppContent: React.FC = () => {
   const { isCollapsed } = useSidebar();
+  const { isReadOnly, isLoading: isModeLoading } = useServerMode();
+
+  // Show loading while checking server mode
+  if (isModeLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading Cineshelf...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800">
@@ -22,9 +36,21 @@ const AppContent: React.FC = () => {
       }`}>
         <Routes>
           <Route path="/" element={<CollectionPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/movies" element={<MoviesPage />} />
+          {isReadOnly ? (
+            // In read-only mode, redirect all admin routes to home
+            <>
+              <Route path="/admin" element={<Navigate to="/" replace />} />
+              <Route path="/movies" element={<Navigate to="/" replace />} />
+              <Route path="/about" element={<Navigate to="/" replace />} />
+            </>
+          ) : (
+            // In full mode, show all routes
+            <>
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/movies" element={<MoviesPage />} />
+            </>
+          )}
         </Routes>
       </div>
     </div>
@@ -59,14 +85,16 @@ function App() {
 
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <SidebarProvider>
-          <DynamicFavicon />
-          <Router>
-            <AppContent />
-          </Router>
-        </SidebarProvider>
-      </AuthProvider>
+      <ServerModeProvider>
+        <AuthProvider>
+          <SidebarProvider>
+            <DynamicFavicon />
+            <Router>
+              <AppContent />
+            </Router>
+          </SidebarProvider>
+        </AuthProvider>
+      </ServerModeProvider>
     </ThemeProvider>
   );
 }

@@ -9,11 +9,23 @@ services:
     restart: unless-stopped
     user: "1000:1000"
     ports:
-      - "${PORT:-3000}:3000"
+      # Read-Only Port (Public-facing)
+      # Maps host port to container port 3000 (read-only server)
+      # Default: 3000, change if needed (e.g., 3006:3000)
+      - "${READ_ONLY_PORT:-3000}:3000"
+      # Admin Port (Full API - Internal/VPN only)
+      # Maps host port to container port 3001 (full API server)
+      # WARNING: Do not expose this port to the public internet!
+      # Default: 3001, change if needed
+      - "${ADMIN_PORT:-3001}:3001"
     environment:
       - NODE_ENV=production
       - PORT=3000
+      # TMDb API Key - Required for movie search and metadata
+      # Get your free API key from: https://www.themoviedb.org/settings/api
       - TMDB_API_KEY=${TMDB_API_KEY}
+      # Admin Password - Required for admin panel access
+      # Set a secure password for the admin panel
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - DATABASE_PATH=/data/database.sqlite
       - UPLOAD_DIR=/data/uploads

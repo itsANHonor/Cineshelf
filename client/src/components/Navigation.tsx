@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 import { useSidebar } from '../context/SidebarContext';
+import { useServerMode } from '../context/ServerModeContext';
 
 const Navigation: React.FC = () => {
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const { isReadOnly } = useServerMode();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -125,38 +127,42 @@ const Navigation: React.FC = () => {
               {!isCollapsed && <span>Collection</span>}
             </Link>
 
-            <Link
-              to="/admin"
-              onClick={closeMobileMenu}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                isActive('/admin')
-                  ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-semibold'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              title={isCollapsed ? 'Settings' : undefined}
-            >
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              {!isCollapsed && <span>Settings</span>}
-            </Link>
+            {!isReadOnly && (
+              <Link
+                to="/admin"
+                onClick={closeMobileMenu}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  isActive('/admin')
+                    ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-semibold'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                title={isCollapsed ? 'Settings' : undefined}
+              >
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {!isCollapsed && <span>Settings</span>}
+              </Link>
+            )}
 
-            <Link
-              to="/about"
-              onClick={closeMobileMenu}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                isActive('/about')
-                  ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-semibold'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              title={isCollapsed ? 'About' : undefined}
-            >
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {!isCollapsed && <span>About</span>}
-            </Link>
+            {!isReadOnly && (
+              <Link
+                to="/about"
+                onClick={closeMobileMenu}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  isActive('/about')
+                    ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-semibold'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                title={isCollapsed ? 'About' : undefined}
+              >
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {!isCollapsed && <span>About</span>}
+              </Link>
+            )}
           </nav>
 
           {/* Theme Toggle */}
@@ -184,9 +190,9 @@ const Navigation: React.FC = () => {
             {/* Page Title - could be dynamic based on route */}
             <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {location.pathname === '/' && 'Collection'}
-              {location.pathname === '/movies' && 'Movies'}
-              {location.pathname === '/admin' && 'Settings'}
-              {location.pathname === '/about' && 'About'}
+              {!isReadOnly && location.pathname === '/movies' && 'Movies'}
+              {!isReadOnly && location.pathname === '/admin' && 'Settings'}
+              {!isReadOnly && location.pathname === '/about' && 'About'}
             </h1>
           </div>
           
