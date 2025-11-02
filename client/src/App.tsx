@@ -36,17 +36,16 @@ const AppContent: React.FC = () => {
       }`}>
         <Routes>
           <Route path="/" element={<CollectionPage />} />
+          <Route path="/about" element={<AboutPage />} />
           {isReadOnly ? (
-            // In read-only mode, redirect all admin routes to home
+            // In read-only mode, redirect admin routes to home
             <>
               <Route path="/admin" element={<Navigate to="/" replace />} />
               <Route path="/movies" element={<Navigate to="/" replace />} />
-              <Route path="/about" element={<Navigate to="/" replace />} />
             </>
           ) : (
-            // In full mode, show all routes
+            // In full mode, show all admin routes
             <>
-              <Route path="/about" element={<AboutPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/movies" element={<MoviesPage />} />
             </>
